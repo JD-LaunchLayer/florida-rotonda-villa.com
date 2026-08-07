@@ -1,0 +1,97 @@
+@media screen and (max-width: 768px) {
+    /* Prevent Horizontal Scrolling */
+    html, body {
+        overflow-x: hidden !important;
+        width: 100% !important;
+        position: relative;
+    }
+
+    /* Container & Canvas Widths */
+    .container {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        padding: 0 16px !important;
+    }
+
+    #main-wrap .container {
+        padding: 24px 16px !important;
+    }
+
+    /* Multi-column layout stack */
+    .wsite-multicol,
+    .wsite-multicol-table-wrap,
+    .wsite-multicol-table,
+    .wsite-multicol-tbody,
+    .wsite-multicol-tr,
+    .wsite-multicol-col {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        margin: 0 !important;
+        padding: 0 0 16px 0 !important;
+    }
+    .wsite-multicol-table-wrap {
+        margin: 0 !important;
+    }
+
+    /* Text & Padding Real Estate */
+    h1, .wsite-headline {
+        font-size: 26px !important;
+        line-height: 1.2 !important;
+    }
+    h2, .wsite-content-title, .wsite-header-section .wsite-content-title {
+        font-size: 20px !important;
+        line-height: 1.3 !important;
+        margin-bottom: 12px !important;
+    }
+    h3 {
+        font-size: 16px !important;
+        line-height: 1.3 !important;
+    }
+    p, div.paragraph {
+        font-size: 15px !important;
+        line-height: 1.5 !important;
+    }
+    .wsite-section-content {
+        padding-top: 16px !important;
+        padding-bottom: 16px !important;
+    }
+
+    /* Image & Media Scaling */
+    img, .wsite-image img, .wsite-caption, .galleryImageBorder, .wsite-image a img {
+        max-width: 100% !important;
+        height: auto !important;
+        width: auto !important;
+        box-sizing: border-box !important;
+    }
+    .wsite-background, .wsite-header-section {
+        background-size: cover !important;
+        background-position: center !important;
+    }
+
+    /* Touch Accessibility */
+    .wsite-button, .wsite-button-inner {
+        min-height: 44px !important;
+        padding: 12px 24px !important;
+        display: inline-block !important;
+        box-sizing: border-box !important;
+        font-size: 16px !important;
+    }
+    .header-wrap .hamburger {
+        width: 44px !important;
+        height: 44px !important;
+        padding: 12px !important;
+        top: 10px !important;
+        right: 10px !important;
+        box-sizing: border-box !important;
+    }
+    #navmobile a {
+        padding: 12px 20px !important;
+        display: block !important;
+        font-size: 16px !important;
+        min-height: 44px !important;
+        box-sizing: border-box !important;
+    }
+}
