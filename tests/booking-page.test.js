@@ -38,7 +38,7 @@ const expected = [
   'Gallery|/gallery.html',
   'Testimonials|/testimonials.html',
   'Contact|/contact.html',
-  'Book|/booking.html',
+  'Book|/booking',
   "T & C's|/t--cs.html"
 ];
 
@@ -46,10 +46,22 @@ test('every page nav lists the same links in the same order', () => {
   for (const page of pages) {
     const found = menus(read(page));
     assert.ok(found.length >= 2, page + ' should have desktop and mobile menus');
+    // 404.html stays a copy of the home page until a later change, so its Book link is unchanged.
+    const want = page === '404.html'
+      ? expected.map((item) => item === 'Book|/booking' ? 'Book|/booking.html' : item)
+      : expected;
     for (const menu of found) {
-      assert.deepEqual(menu, expected, page);
+      assert.deepEqual(menu, want, page);
     }
   }
+});
+
+test('netlify serves /booking as the booking page', () => {
+  const config = read('netlify.toml');
+  assert.match(config, /from = "\/booking"\s+to = "\/booking\.html\/index\.html"\s+status = 200/s);
+  assert.match(config, /from = "\/booking\/"\s+to = "\/booking\.html\/index\.html"\s+status = 200/s);
+  assert.match(config, /from = "\/booking\.html"\s+to = "\/booking"\s+status = 301/s);
+  assert.match(config, /from = "\/booking-demo\.html"\s+to = "\/booking"\s+status = 301/s);
 });
 
 test('booking page is indexable and the old demo is only a redirect', () => {
