@@ -29,14 +29,6 @@
   ],
   "years": [
     {
-      "year": 2023,
-      "rates": {
-        "may-aug": { "perWeek": 800, "perDay": 114 },
-        "sep-dec": { "perWeek": 850, "perDay": 122 },
-        "dec-jan": { "perWeek": 1100, "perDay": 157 }
-      }
-    },
-    {
       "year": 2024,
       "rates": {
         "jan-apr": { "perWeek": 900, "perDay": 129 },
@@ -47,6 +39,15 @@
     },
     {
       "year": 2025,
+      "rates": {
+        "jan-apr": { "perWeek": 900, "perDay": 129 },
+        "may-aug": { "perWeek": 800, "perDay": 114 },
+        "sep-dec": { "perWeek": 850, "perDay": 122 },
+        "dec-jan": { "perWeek": 1200, "perDay": 171 }
+      }
+    },
+    {
+      "year": 2026,
       "rates": {
         "jan-apr": { "perWeek": 900, "perDay": 129 },
         "may-aug": { "perWeek": 800, "perDay": 114 },

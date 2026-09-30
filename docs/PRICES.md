@@ -6,8 +6,8 @@ The About page and the booking demo both read that file. Change a number there a
 
 ## What you can edit
 
-- **A year's rates.** Each year lists a price per week and per day for the bands you want to publish. To change 2025, edit that year's `perWeek` and `perDay` values.
-- **A new year.** Copy a year object, set `year`, and fill in the bands you want to show. A band you leave out is omitted from that year's table. 2023 is the example: it has no Jan 5–Apr 30 row, and its Dec 20–Jan 4 rate differs from later years.
+- **A year's rates.** Each year lists a price per week and per day for the bands you want to publish. To change 2026, edit that year's `perWeek` and `perDay` values.
+- **A new year.** Copy a year object, set `year`, and fill in each band. A band you leave out is omitted from that year's table. The published years are 2024, 2025, and 2026. 2026 uses the same weekly and daily amounts as 2025.
 - **Extras.** Pool heat, cot, high chair, final cleaning, and the refundable security deposit are under `extras`. `balanceDueWeeksBefore` is the number of weeks before arrival when the balance is due.
 
 Amounts are whole pounds. `currency` is `GBP`. The pages format them as £1,200.
@@ -29,5 +29,5 @@ A night uses the prices for that night's calendar year. 4 January and 31 Decembe
 
 ## Pages
 
-- About (`/about.html`) draws the year tables and the extras sentences from this file when JavaScript runs. The tables already in the page stay as the no-JavaScript fallback, so a normal browser only needs this file edited.
+- About (`/about.html`) draws the 2024, 2025, and 2026 tables and the extras sentences from this file when JavaScript runs. The same three tables stay in the page as the no-JavaScript fallback. A normal browser only needs this file edited.
 - The booking demo (`/booking-demo.html`) uses the per-day rate for each night. It is a rough quote. The final price is confirmed by the owner. Years that are not listed here are not given a guessed price.
