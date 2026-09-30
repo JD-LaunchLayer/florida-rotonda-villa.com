@@ -5,6 +5,9 @@ const PRODUCTION_ORIGINS = [
   'https://www.florida-rotonda-villa.co.uk',
 ];
 
+// Netlify site name from the deploy-preview URL, plus the earlier assumed slug.
+const NETLIFY_SLUGS = ['floridarotondavillacom', 'florida-rotonda-villa'];
+
 export function isAllowedOrigin(origin, env) {
   if (!origin || typeof origin !== 'string') return false;
   let url;
@@ -16,10 +19,15 @@ export function isAllowedOrigin(origin, env) {
   if (url.origin !== origin) return false;
   if (PRODUCTION_ORIGINS.includes(origin)) return true;
 
-  const slug = String(env && env.NETLIFY_SITE_SLUG || 'florida-rotonda-villa').trim();
   const host = url.hostname.toLowerCase();
-  if (url.protocol === 'https:' && slug && (host === `${slug}.netlify.app` || host.endsWith(`--${slug}.netlify.app`))) {
-    return true;
+  const slugs = new Set(NETLIFY_SLUGS);
+  const fromEnv = String(env && env.NETLIFY_SITE_SLUG || '').trim();
+  if (fromEnv) slugs.add(fromEnv);
+  if (url.protocol === 'https:') {
+    for (const slug of slugs) {
+      if (!slug) continue;
+      if (host === `${slug}.netlify.app` || host.endsWith(`--${slug}.netlify.app`)) return true;
+    }
   }
 
   const extras = String(env && env.ALLOWED_ORIGINS || '')

@@ -77,8 +77,8 @@ function testEnv(db, extra = {}) {
     DB: db,
     OWNER_EMAIL: 'owner@example.com',
     EMAIL_FROM: 'Florida Rotonda Villa <bookings@example.com>',
-    NETLIFY_SITE_SLUG: 'florida-rotonda-villa',
-    ALLOWED_ORIGINS: '',
+    NETLIFY_SITE_SLUG: 'floridarotondavillacom',
+    ALLOWED_ORIGINS: 'https://florida-rotonda-villa.com,https://www.florida-rotonda-villa.com,https://florida-rotonda-villa.co.uk,https://www.florida-rotonda-villa.co.uk',
     PROPERTY_TIMEZONE: 'America/New_York',
     REMINDER_TIMEZONE: 'Europe/London',
     ...extra,
@@ -474,7 +474,11 @@ test('posting is rate limited and dry-run email does not call the provider', asy
 test('CORS allows the villa domains and Netlify previews only', () => {
   const env = testEnv(null);
   assert.equal(isAllowedOrigin('https://florida-rotonda-villa.com', env), true);
+  assert.equal(isAllowedOrigin('https://www.florida-rotonda-villa.com', env), true);
+  assert.equal(isAllowedOrigin('https://florida-rotonda-villa.co.uk', env), true);
   assert.equal(isAllowedOrigin('https://www.florida-rotonda-villa.co.uk', env), true);
+  assert.equal(isAllowedOrigin('https://floridarotondavillacom.netlify.app', env), true);
+  assert.equal(isAllowedOrigin('https://deploy-preview-5--floridarotondavillacom.netlify.app', env), true);
   assert.equal(isAllowedOrigin('https://florida-rotonda-villa.netlify.app', env), true);
   assert.equal(isAllowedOrigin('https://deploy-preview-4--florida-rotonda-villa.netlify.app', env), true);
   assert.equal(isAllowedOrigin('https://evil.example', env), false);

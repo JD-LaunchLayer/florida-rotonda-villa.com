@@ -12,17 +12,25 @@ From `worker/`, after the steps below:
 npx wrangler deploy
 ```
 
-That publishes the Worker, the D1 binding, and an hourly cron (`0 * * * *`). The static site stays on Netlify. Point it at the Worker by setting `baseUrl` in [`data/booking-api.json`](../data/booking-api.json) to the `workers.dev` URL Wrangler prints, with no trailing slash:
+That publishes the Worker, the D1 binding, and an hourly cron (`0 * * * *`). The static site stays on Netlify.
+
+The Cloudflare account's workers.dev subdomain is `rotonda-villa`. Confirm it in the dashboard under Workers & Pages → Settings → workers.dev subdomain before the first deploy. With `"workers_dev": true` in `worker/wrangler.jsonc`, Wrangler publishes to `https://<worker-name>.<subdomain>.workers.dev`. For this Worker that URL is:
+
+`https://florida-rotonda-villa-api.rotonda-villa.workers.dev`
+
+[`data/booking-api.json`](../data/booking-api.json) already points at that URL, with no trailing slash:
 
 ```json
-{ "baseUrl": "https://florida-rotonda-villa-api.<your-subdomain>.workers.dev" }
+{ "baseUrl": "https://florida-rotonda-villa-api.rotonda-villa.workers.dev" }
 ```
 
-Then deploy the static site as usual. Until `baseUrl` is set, `/booking` keeps using `data/availability.json` and the form explains that the booking service is not connected. The contact page still posts to Web3Forms.
+Deploy the static site as usual so `/booking` picks up the file. If `baseUrl` is emptied, `/booking` falls back to `data/availability.json` and the form explains that the booking service is not connected. The contact page still posts to Web3Forms.
 
 ## First-time setup
 
-These commands are for Jordan to run. They were not run against a Cloudflare account from this change.
+The remote database and the first deploy already exist. `worker/wrangler.jsonc` binds `DB` to `florida-rotonda-villa-db` with database id `a760105a-f7d8-48d5-8f21-4a5290fef7b8`. Migration `0001_init.sql` is applied on that remote database. Keep a single D1 binding named `DB`. Wrangler sometimes inserts a second binding, `florida_rotonda_villa_db`, for the same database; delete that entry so only `DB` remains, then redeploy.
+
+To recreate this on a new account:
 
 ```bash
 cd worker
@@ -31,7 +39,7 @@ npx wrangler login
 npx wrangler d1 create florida-rotonda-villa-db
 ```
 
-Copy the `database_id` from that command into `worker/wrangler.jsonc`, replacing `00000000-0000-0000-0000-000000000000`. Then apply the migration to the remote database:
+Register or confirm the workers.dev subdomain (`rotonda-villa` on this account) before `wrangler deploy`, or the `workers.dev` URL will not match `data/booking-api.json`. Copy the `database_id` from `d1 create` into the `DB` binding in `worker/wrangler.jsonc`. Then apply the migration to the remote database:
 
 ```bash
 npx wrangler d1 migrations apply florida-rotonda-villa-db --remote
@@ -60,7 +68,7 @@ npx wrangler d1 migrations apply florida-rotonda-villa-db --local
 
 ## Secrets and variables
 
-Nothing secret belongs in the repo. `worker/wrangler.jsonc` only has placeholders.
+Nothing secret belongs in the repo. `worker/wrangler.jsonc` holds the database id and non-secret vars. Bank details and the email API key stay in Worker secrets.
 
 | Name | How to set it | Placeholder behaviour |
 | --- | --- | --- |
@@ -71,8 +79,8 @@ Nothing secret belongs in the repo. `worker/wrangler.jsonc` only has placeholder
 | `BANK_SORT_CODE` | `npx wrangler secret put BANK_SORT_CODE` | Empty becomes `[PLACEHOLDER]`. |
 | `BANK_ACCOUNT_NUMBER` | `npx wrangler secret put BANK_ACCOUNT_NUMBER` | Empty becomes `[PLACEHOLDER]`. |
 | `EMAIL_API_URL` | optional secret | Defaults to `https://api.resend.com/emails`. The body is Resend-shaped: `from`, `to`, `subject`, `text`, `html`, `reply_to`. |
-| `NETLIFY_SITE_SLUG` | var in `wrangler.jsonc` | `florida-rotonda-villa`. Change it if the Netlify site name differs, then redeploy. |
-| `ALLOWED_ORIGINS` | var in `wrangler.jsonc` | Extra exact origins, comma-separated. Empty is fine. |
+| `NETLIFY_SITE_SLUG` | var in `wrangler.jsonc` | `floridarotondavillacom`, the Netlify site name from the deploy-preview host. Change it if that name differs, then redeploy. |
+| `ALLOWED_ORIGINS` | var in `wrangler.jsonc` | Extra exact origins, comma-separated. The committed value lists both production domains and their `www` hosts. |
 | `PROPERTY_TIMEZONE` | var | `America/New_York`. "Today" for check-in uses this zone. |
 | `REMINDER_TIMEZONE` | var | `Europe/London`. The balance reminder uses this calendar date. |
 | `ALLOW_LOCALHOST` | `worker/.dev.vars` only | Set to `true` for local preview. It is not in the production vars. |
@@ -89,8 +97,9 @@ CORS allows:
 
 - `https://florida-rotonda-villa.com` and `https://www.florida-rotonda-villa.com`
 - `https://florida-rotonda-villa.co.uk` and `https://www.florida-rotonda-villa.co.uk`
-- `https://florida-rotonda-villa.netlify.app`
-- deploy and branch previews such as `https://deploy-preview-4--florida-rotonda-villa.netlify.app`
+- `https://floridarotondavillacom.netlify.app`
+- deploy and branch previews such as `https://deploy-preview-5--floridarotondavillacom.netlify.app`
+- the earlier slug `florida-rotonda-villa` on `*.netlify.app`, in case a preview still uses it
 - origins listed in `ALLOWED_ORIGINS`
 - `http://localhost` and `http://127.0.0.1` only when `ALLOW_LOCALHOST=true`
 
@@ -167,13 +176,13 @@ TZ=UTC node --test tests/price-stay.test.js tests/booking-page.test.js worker/te
 
 The API tests use Node's built-in SQLite and the same SQL file. They cover pricing parity with the page, same-day turnover, the blocked range, expiry at 72 hours, reminder selection, the invoice placeholders, rate limiting, and CORS. Node may print an experimental SQLite warning.
 
+## Deployed
+
+The Worker is published at `https://florida-rotonda-villa-api.rotonda-villa.workers.dev`. Remote D1 id `a760105a-f7d8-48d5-8f21-4a5290fef7b8` has migration `0001` applied. A redeploy is required after changing `NETLIFY_SITE_SLUG` or `ALLOWED_ORIGINS`; the allow-list is compiled into the running Worker only when Wrangler uploads it.
+
 ## Not tested against real Cloudflare
 
-- `wrangler deploy`, `wrangler login`, and the account that will own this Worker
-- Remote D1, including `migrations apply --remote` and production batch behaviour
 - The cron trigger firing on Cloudflare's scheduler
 - A live email provider, DNS for the sender, and delivery to a real inbox
-- The browser call from the production Netlify site and its preview URLs (the allow-list is unit tested)
-- `workers.dev` routing, custom domains, and dashboard logs
-
-Local `wrangler d1 migrations apply --local` and `wrangler deploy --dry-run` were run in development. Those do not create the remote database.
+- A booking submitted from the production domains or the Netlify deploy preview in a browser (the allow-list is unit tested, and preflight checks can be run with curl against the workers.dev URL)
+- Custom domains on the Worker, and dashboard logs
