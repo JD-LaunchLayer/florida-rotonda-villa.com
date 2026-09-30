@@ -295,79 +295,24 @@
 			color: #fff;
 		}
 
-		.rules-list {
-			list-style: none;
-			margin: 0;
-			padding: 0;
-		}
-
-		.rules-list li {
-			display: grid;
-			grid-template-columns: 110px 1fr;
-			gap: 10px;
-			padding: 12px 0;
-			border-bottom: 1px solid var(--line);
-			font-size: 15px;
-			line-height: 1.45;
-		}
-
-		.rules-list li:last-child { border-bottom: none; }
-
-		.rules-list strong {
-			color: var(--ink);
-			font-weight: 700;
-			font-size: 12px;
-			letter-spacing: 0.04em;
-			text-transform: uppercase;
-		}
-
-		.rules-list span { color: var(--muted); }
-
-		.accordion {
-			margin-top: 18px;
-			border: 1px solid var(--line);
-		}
-
-		.accordion-trigger {
-			width: 100%;
-			appearance: none;
-			border: 0;
-			background: #faf7f0;
-			color: var(--ink);
-			font-family: 'Lato', sans-serif;
-			font-size: 15px;
-			font-weight: 600;
-			text-align: left;
-			padding: 14px 16px;
-			cursor: pointer;
-			display: flex;
-			justify-content: space-between;
-			align-items: center;
-			gap: 12px;
-		}
-
-		.accordion-trigger span {
-			color: var(--gold);
-			font-size: 18px;
-			line-height: 1;
-		}
-
-		.accordion-panel {
-			display: none;
-			padding: 0 16px 16px;
-			background: #fff;
+		.quote-note,
+		.quote-breakdown {
+			margin: 12px 0 0;
 			color: var(--muted);
 			font-size: 14px;
-			line-height: 1.65;
+			line-height: 1.5;
+			text-align: left;
+			font-weight: 400;
 		}
 
-		.accordion.open .accordion-panel { display: block; }
-		.accordion.open .accordion-trigger span { transform: rotate(45deg); }
+		.terms-link {
+			margin: 0;
+			font-size: 16px;
+		}
 
-		.accordion-panel p { margin: 12px 0 0; }
-		.accordion-panel ul {
-			margin: 10px 0 0;
-			padding-left: 18px;
+		.terms-link a {
+			color: var(--gold);
+			font-weight: 700;
 		}
 
 		.form-grid {
@@ -420,10 +365,6 @@
 			.booking-layout {
 				grid-template-columns: 1fr;
 				gap: 24px;
-			}
-			.rules-list li {
-				grid-template-columns: 1fr;
-				gap: 4px;
 			}
 			.form-grid {
 				grid-template-columns: 1fr;
@@ -536,13 +477,13 @@
 						<div class="wsite-section-content">
 							<div class="container booking-demo">
 								<p class="demo-note">
-									This is a private test page (noindex). Sample availability and pricing are for demonstration only and do not confirm a live reservation.
+									This is a private test page (noindex). Sample booked dates are for demonstration only and do not confirm a live reservation. The rough quote uses the published rates.
 								</p>
 
 								<div class="booking-layout">
 									<section class="booking-panel" aria-labelledby="availability-heading">
 										<h2 id="availability-heading">Check Availability</h2>
-										<p class="panel-lead">Select an available check-in date, then a check-out date. Booked nights are shown in red.</p>
+										<p class="panel-lead">Select an available check-in date, then a check-out date. Booked nights are shown in red. The red dates are samples. Real booked dates are still needed from the owner.</p>
 
 										<div class="cal-nav">
 											<button type="button" id="cal-prev" aria-label="Previous month">Prev</button>
@@ -576,72 +517,23 @@
 													<dt>Nights</dt>
 													<dd id="summary-nights">0</dd>
 												</div>
-												<div>
-													<dt>Nightly rate</dt>
-													<dd>$180</dd>
-												</div>
 												<div class="total">
-													<dt>Estimated total</dt>
-													<dd id="summary-total">$0</dd>
+													<dt>Rough quote</dt>
+													<dd id="summary-total">—</dd>
 												</div>
 											</dl>
+											<p id="quote-note" class="quote-note">Rough quote using the per-day rate for the band each night falls in. The final price is confirmed by the owner.</p>
+											<p id="quote-breakdown" class="quote-breakdown"></p>
 											<div class="stay-actions">
 												<button type="button" id="clear-selection">Clear dates</button>
 											</div>
 										</div>
 									</section>
 
-									<section class="rules-panel" aria-labelledby="rules-heading">
-										<h2 id="rules-heading">House Rules &amp; Booking Terms</h2>
-										<p class="panel-lead">Please review these guidelines before submitting a reservation request.</p>
-										<ul class="rules-list">
-											<li>
-												<strong>Check-in</strong>
-												<span>4:00 PM</span>
-											</li>
-											<li>
-												<strong>Check-out</strong>
-												<span>10:00 AM</span>
-											</li>
-											<li>
-												<strong>Occupancy</strong>
-												<span>Maximum 8 guests</span>
-											</li>
-											<li>
-												<strong>Smoking</strong>
-												<span>No smoking / no vaping indoors</span>
-											</li>
-											<li>
-												<strong>Pets</strong>
-												<span>No pets allowed</span>
-											</li>
-											<li>
-												<strong>Age</strong>
-												<span>Primary guest must be at least 25 years old</span>
-											</li>
-											<li>
-												<strong>Quiet hours</strong>
-												<span>10:00 PM – 8:00 AM</span>
-											</li>
-										</ul>
-
-										<div class="accordion" id="policy-accordion">
-											<button type="button" class="accordion-trigger" id="policy-toggle" aria-expanded="false" aria-controls="policy-panel">
-												Full Cancellation Policy &amp; Deposit Requirements
-												<span aria-hidden="true">+</span>
-											</button>
-											<div class="accordion-panel" id="policy-panel" role="region" aria-labelledby="policy-toggle" hidden>
-												<p><strong>Deposit:</strong> A 30% deposit is required to secure your reservation. The remaining balance is due 30 days before check-in.</p>
-												<p><strong>Security deposit:</strong> A refundable damage deposit of $500 is held and returned within 7 days of departure, subject to property inspection.</p>
-												<p><strong>Cancellation:</strong></p>
-												<ul>
-													<li>60+ days before arrival: full refund of deposit minus a $75 administration fee</li>
-													<li>30–59 days before arrival: 50% of the total stay is forfeited</li>
-													<li>Fewer than 30 days before arrival: no refund</li>
-												</ul>
-												<p>Sample policy for this demo only — final terms appear on the official T&amp;Cs page.</p>
-											</div>
-										</div>
+									<section class="rules-panel" aria-labelledby="terms-heading">
+										<h2 id="terms-heading">Booking terms</h2>
+										<p class="panel-lead">Booking terms are on the Terms and Conditions page.</p>
+										<p class="terms-link"><a href="/terms-and-conditions.html">Terms and Conditions</a></p>
 									</section>
 								</div>
 
@@ -748,15 +640,16 @@
 	<script type="text/javascript" src="/files/theme/plugins.js?1556896837"></script>
 	<script type="text/javascript" src="/files/theme/custom.js?1556896837"></script>
 
+	<script src="/data/villa-rates.js"></script>
 	<script>
 	(function () {
-		var NIGHTLY_RATE = 180;
 		var MONTH_NAMES = [
 			'January', 'February', 'March', 'April', 'May', 'June',
 			'July', 'August', 'September', 'October', 'November', 'December'
 		];
 
-		// Sample booked ranges (inclusive start, exclusive end for nights occupied)
+		// TODO: Replace these sample ranges with the real booked dates from the owner.
+		// Sample booked ranges (inclusive start, exclusive end for nights occupied).
 		var bookedRanges = [
 			{ start: '2026-08-12', end: '2026-08-19' },
 			{ start: '2026-08-28', end: '2026-09-04' },
@@ -771,6 +664,8 @@
 		var viewDate = new Date(2026, 7, 1); // August 2026
 		var selectionStart = null;
 		var selectionEnd = null;
+		var prices = null;
+		var pricesStatus = 'loading';
 
 		var calGrid = document.getElementById('cal-grid');
 		var monthLabel = document.getElementById('cal-month-label');
@@ -778,6 +673,7 @@
 		var summaryCheckout = document.getElementById('summary-checkout');
 		var summaryNights = document.getElementById('summary-nights');
 		var summaryTotal = document.getElementById('summary-total');
+		var quoteBreakdown = document.getElementById('quote-breakdown');
 		var formCheckin = document.getElementById('form-checkin');
 		var formCheckout = document.getElementById('form-checkout');
 		var formNights = document.getElementById('form-nights');
@@ -845,20 +741,71 @@
 			return false;
 		}
 
+		function uniqueLabels(items) {
+			var seen = {};
+			var labels = [];
+			for (var i = 0; i < items.length; i++) {
+				var night = items[i];
+				var label = night.band
+					? night.band.label + ' in ' + night.year
+					: String(night.year);
+				if (!seen[label]) {
+					seen[label] = true;
+					labels.push(label);
+				}
+			}
+			return labels;
+		}
+
 		function updateSummary() {
 			summaryCheckin.textContent = formatDisplay(selectionStart);
 			summaryCheckout.textContent = formatDisplay(selectionEnd);
 
 			var nights = (selectionStart && selectionEnd) ? nightsBetween(selectionStart, selectionEnd) : 0;
-			var total = nights * NIGHTLY_RATE;
-
 			summaryNights.textContent = String(nights);
-			summaryTotal.textContent = '$' + total.toLocaleString();
-
 			formCheckin.value = selectionStart ? toISO(selectionStart) : '';
 			formCheckout.value = selectionEnd ? toISO(selectionEnd) : '';
 			formNights.value = nights ? String(nights) : '';
-			formEstimate.value = nights ? ('$' + total.toLocaleString() + ' (' + nights + ' × $' + NIGHTLY_RATE + ')') : '';
+
+			if (!nights) {
+				summaryTotal.textContent = '—';
+				quoteBreakdown.textContent = '';
+				formEstimate.value = '';
+				return;
+			}
+
+			if (pricesStatus === 'loading' || !window.VillaRates) {
+				summaryTotal.textContent = '—';
+				quoteBreakdown.textContent = pricesStatus === 'error'
+					? 'Published rates could not be loaded.'
+					: 'Loading published rates.';
+				formEstimate.value = '';
+				return;
+			}
+
+			if (pricesStatus === 'error' || !prices) {
+				summaryTotal.textContent = '—';
+				quoteBreakdown.textContent = 'Published rates could not be loaded.';
+				formEstimate.value = '';
+				return;
+			}
+
+			var quote = VillaRates.quoteStay(prices, selectionStart, selectionEnd);
+			if (quote.missing.length || quote.total == null) {
+				var msg = 'No published rate for ' + uniqueLabels(quote.missing).join('; ') + '. The final price is confirmed by the owner.';
+				summaryTotal.textContent = '—';
+				quoteBreakdown.textContent = msg;
+				formEstimate.value = msg;
+				return;
+			}
+
+			var parts = quote.groups.map(function (group) {
+				var nightWord = group.nights === 1 ? 'night' : 'nights';
+				return group.nights + ' ' + nightWord + ' × ' + VillaRates.formatGBP(group.perDay) + ' per day (' + group.label + ', ' + group.year + ')';
+			});
+			summaryTotal.textContent = VillaRates.formatGBP(quote.total);
+			quoteBreakdown.textContent = parts.join('; ') + '.';
+			formEstimate.value = VillaRates.formatGBP(quote.total) + ' (' + parts.join('; ') + ')';
 		}
 
 		function clearSelection() {
@@ -958,20 +905,6 @@
 
 		document.getElementById('clear-selection').addEventListener('click', clearSelection);
 
-		var accordion = document.getElementById('policy-accordion');
-		var toggle = document.getElementById('policy-toggle');
-		var panel = document.getElementById('policy-panel');
-
-		toggle.addEventListener('click', function () {
-			var open = accordion.classList.toggle('open');
-			toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-			if (open) {
-				panel.removeAttribute('hidden');
-			} else {
-				panel.setAttribute('hidden', '');
-			}
-		});
-
 		document.getElementById('booking-demo-form').addEventListener('submit', function (e) {
 			if (!selectionStart || !selectionEnd) {
 				e.preventDefault();
@@ -981,6 +914,20 @@
 
 		updateSummary();
 		renderCalendar();
+
+		if (window.VillaRates) {
+			VillaRates.loadPrices('/data/prices.json').then(function (data) {
+				prices = data;
+				pricesStatus = 'ready';
+				updateSummary();
+			}).catch(function () {
+				prices = null;
+				pricesStatus = 'error';
+				updateSummary();
+			});
+		} else {
+			pricesStatus = 'error';
+		}
 	})();
 	</script>
 </body>

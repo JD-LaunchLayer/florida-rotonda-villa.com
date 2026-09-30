@@ -259,8 +259,41 @@ var STYLE_PREFIX = 'wsite';
 	</table>
 </div></div></div>
 
+<style>
+#villa-rates-live .simple-table-wrapper { padding: 20px 0; }
+#villa-rates-live .simple-table {
+  width: 100%;
+  border: 1px solid #C9CDCF;
+  border-spacing: 0;
+}
+#villa-rates-live .simple-table td.cell {
+  border-right: 1px solid #C9CDCF;
+  border-bottom: 1px solid #C9CDCF;
+  word-break: break-word;
+  background-color: #FFFFFF;
+  width: 33.333333333333%;
+}
+#villa-rates-live .simple-table td.cell .paragraph {
+  width: 90%;
+  margin: 0 5%;
+  padding-bottom: 10px;
+  padding-top: 10px;
+  text-align: center;
+}
+#villa-rates-live .simple-table.style-top tr:first-child td {
+  background-color: #C8AE79;
+}
+#villa-rates-live .simple-table.style-top tr:first-child td .paragraph {
+  font-weight: 700;
+}
+#villa-rates-live .simple-table tr:last-child td { border-bottom: none; }
+#villa-rates-live .simple-table td:last-of-type { border-right: none; }
+#villa-rates .villa-rates-off { display: none !important; }
+</style>
 <h2 class="wsite-content-title"><font color="#c8ae79"><strong><font size="7">Rates</font></strong>:</font></h2>
-
+<div id="villa-rates">
+<div id="villa-rates-live" data-villa-rates-live class="villa-rates-off"></div>
+<div data-villa-rates-fallback>
 <div class="paragraph"><span style="color:rgb(0, 0, 0)">Pool heat is optional and is charged at &pound;126 per week if requested at the time of booking, this is only needed between October and April. For your convenience we offer a variety of payment methods.&nbsp;</span><span style="color:rgb(0, 0, 0)">&nbsp;A security deposit of &pound;300 is required along with the final balance 6 weeks prior to arrival. The security deposit is fully refundable pending an inspection from our management company.<br />Cot hire is &pound;20 per stay.<br />High Chair hire is &pound;20 per stay.<br /><br />There is a final cleaning fee of &pound;120.</span><br /></div>
 
 <div id="950245400635935312"><div><style type="text/css">
@@ -860,6 +893,19 @@ if (document.documentElement.appReady || (window.inEditor && window.inEditor()))
 }
 
 </script></div></div>
+</div>
+</div>
+<script src="/data/villa-rates.js"></script>
+<script>
+(function () {
+	if (!window.VillaRates) return;
+	var root = document.getElementById('villa-rates');
+	if (!root) return;
+	VillaRates.loadPrices('/data/prices.json').then(function (prices) {
+		VillaRates.renderAbout(root, prices);
+	}).catch(function () {});
+})();
+</script>
 
 <div class="wsite-spacer" style="height:50px;"></div>
 			</div>

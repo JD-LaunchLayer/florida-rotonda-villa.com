@@ -1,0 +1,83 @@
+{
+  "currency": "GBP",
+  "balanceDueWeeksBefore": 6,
+  "bands": [
+    {
+      "id": "jan-apr",
+      "label": "Jan 5th - Apr 30th",
+      "start": "01-05",
+      "end": "04-30"
+    },
+    {
+      "id": "may-aug",
+      "label": "May 1st - Aug 31st",
+      "start": "05-01",
+      "end": "08-31"
+    },
+    {
+      "id": "sep-dec",
+      "label": "Sep 1st - Dec 19th",
+      "start": "09-01",
+      "end": "12-19"
+    },
+    {
+      "id": "dec-jan",
+      "label": "Dec 20th - Jan 4th",
+      "start": "12-20",
+      "end": "01-04"
+    }
+  ],
+  "years": [
+    {
+      "year": 2023,
+      "rates": {
+        "may-aug": { "perWeek": 800, "perDay": 114 },
+        "sep-dec": { "perWeek": 850, "perDay": 122 },
+        "dec-jan": { "perWeek": 1100, "perDay": 157 }
+      }
+    },
+    {
+      "year": 2024,
+      "rates": {
+        "jan-apr": { "perWeek": 900, "perDay": 129 },
+        "may-aug": { "perWeek": 800, "perDay": 114 },
+        "sep-dec": { "perWeek": 850, "perDay": 122 },
+        "dec-jan": { "perWeek": 1200, "perDay": 171 }
+      }
+    },
+    {
+      "year": 2025,
+      "rates": {
+        "jan-apr": { "perWeek": 900, "perDay": 129 },
+        "may-aug": { "perWeek": 800, "perDay": 114 },
+        "sep-dec": { "perWeek": 850, "perDay": 122 },
+        "dec-jan": { "perWeek": 1200, "perDay": 171 }
+      }
+    }
+  ],
+  "extras": {
+    "poolHeat": {
+      "amount": 126,
+      "per": "week",
+      "optional": true,
+      "seasonStart": "10-01",
+      "seasonEnd": "04-30"
+    },
+    "cot": {
+      "amount": 20,
+      "per": "stay"
+    },
+    "highChair": {
+      "amount": 20,
+      "per": "stay"
+    },
+    "finalCleaning": {
+      "amount": 120,
+      "per": "stay"
+    },
+    "securityDeposit": {
+      "amount": 300,
+      "refundable": true
+    }
+  }
+}
