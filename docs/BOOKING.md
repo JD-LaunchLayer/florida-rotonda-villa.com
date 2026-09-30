@@ -1,6 +1,6 @@
 # Booking page
 
-`/booking` is the on-site booking page. `/booking.html` serves the same page, using the export layout (`booking.html/index.html`) plus `booking/index.html` for the extensionless URL.
+`/booking` is the on-site booking page. The file lives at `booking.html/index.html`, which is how the other exported pages are stored. `booking/index.html` is the same file for local preview. On Netlify, `netlify.toml` rewrites `/booking` and `/booking/` to that file with status 200, and redirects `/booking.html`, `/booking.html/`, and `/booking-demo.html` to `/booking`. Nav and BOOK NOW links use `/booking`.
 
 This version is front-end only. The request form still posts to the existing Web3Forms endpoint. It does not confirm a reservation: the owner confirms, and the dates are held while the request is pending.
 

@@ -1,0 +1,37 @@
+# There is no build step. The site is the repository root.
+# These rules only cover the booking URLs. Other pages stay on the export paths.
+
+# /booking is shadowed by the booking.html directory, so the booking/ folder
+# never gets served and the request falls through to 404.html. Rewrite both
+# forms to the page file. The target is the file, not /booking.html/, so it
+# does not match the canonical redirects below.
+
+[[redirects]]
+  from = "/booking"
+  to = "/booking.html/index.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/booking/"
+  to = "/booking.html/index.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/booking.html"
+  to = "/booking"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/booking.html/"
+  to = "/booking"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/booking-demo.html"
+  to = "/booking"
+  status = 301
+  force = true
