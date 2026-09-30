@@ -140,11 +140,16 @@
 		}
 
 		/* The theme lays this section out as a table, which blocks position: sticky.
-		   The wrap sits inside #wsite-content, not as a direct child of #main-wrap. */
+		   The wrap sits inside #wsite-content, not as a direct child of #main-wrap.
+		   A lone body section is given height: 400px. On a table cell that is only a
+		   minimum, so the section grows. As a block it stays 400px, the content spills
+		   out, and the gold footer (z-index 5) paints across the middle of the page. */
 		body.wsite-page-booking #main-wrap .wsite-section-wrap,
 		body.wsite-page-booking #main-wrap .wsite-section.wsite-body-section {
 			display: block;
 			width: 100%;
+			height: auto;
+			min-height: 400px;
 		}
 
 		.quote-card {
@@ -491,6 +496,14 @@
 				top: 16px;
 				max-height: calc(100vh - 32px);
 				overflow-y: auto;
+			}
+		}
+
+		/* From 861px to 992px the theme pins the nav (55px) and this summary is sticky. */
+		@media screen and (min-width: 861px) and (max-width: 992px) {
+			.quote-card {
+				top: 71px;
+				max-height: calc(100vh - 87px);
 			}
 		}
 	</style>
