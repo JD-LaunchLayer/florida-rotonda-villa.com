@@ -22,6 +22,7 @@
   "triggers": {
     "crons": ["0 * * * *"]
   },
+  // APPROVAL_SECRET is not a var. Set it with: npx wrangler secret put APPROVAL_SECRET
   "vars": {
     "OWNER_EMAIL": "owner@example.com",
     "EMAIL_FROM": "Florida Rotonda Villa <bookings@example.com>",

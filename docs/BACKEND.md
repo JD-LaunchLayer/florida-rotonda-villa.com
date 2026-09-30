@@ -2,7 +2,7 @@
 
 The booking page sends requests to a Cloudflare Worker, `florida-rotonda-villa-api`, backed by its own D1 database, `florida-rotonda-villa-db`. The Worker lives in [`worker/`](../worker). This site does not share that Worker or database with any other project.
 
-Guests can request any arrival weekday. The API saves the request as `pending`, holds the nights for 72 hours, and the calendar reads those holds back. A check-out morning is free for the next guest's check-in. The owner approval screen is a later change. `confirmBooking()` in `worker/src/db.js` is internal and is covered by tests. There is no public approve or reject URL.
+Guests can request any arrival weekday. The API saves the request as `pending`, holds the nights for 72 hours, and the calendar reads those holds back. A check-out morning is free for the next guest's check-in. The owner decides each request from the notification email. Those links open a page on this Worker. Opening a link does not change the booking. Approve and Reject are buttons on that page, and only those POST requests confirm or decline it.
 
 ## What you deploy
 
@@ -72,6 +72,7 @@ Nothing secret belongs in the repo. `worker/wrangler.jsonc` holds the database i
 
 | Name | How to set it | Placeholder behaviour |
 | --- | --- | --- |
+| `APPROVAL_SECRET` | `npx wrangler secret put APPROVAL_SECRET` | If this is missing, the booking is still saved and the guest still gets the request email. The owner email says the approval links are unavailable. Generate a long random value, for example with `openssl rand -base64 32`, and paste it into the secret prompt. Do not commit it. Use a new value for production; the test suite has its own fake secret. Changing this secret invalidates links that were already sent. Those holds still expire after 72 hours. |
 | `EMAIL_API_KEY` | `npx wrangler secret put EMAIL_API_KEY` | If this is missing, every email is logged as `email_dry_run` and nothing is sent. |
 | `EMAIL_FROM` | `npx wrangler secret put EMAIL_FROM` | The committed var is `Florida Rotonda Villa <bookings@example.com>`. A sender containing `example.com` does not send. Use a verified address such as `Florida Rotonda Villa <bookings@your-domain>`. |
 | `OWNER_EMAIL` | `npx wrangler secret put OWNER_EMAIL` | The committed var is `owner@example.com`. Mail to that address is logged, not sent. A secret overrides the var. |
@@ -135,19 +136,40 @@ Overlapping a pending booking, a confirmed booking, or the blocked February 2027
 
 Success is `201` with `id` (for example `FRV-1A2B3C4D`), `status: "pending"`, `expiresAt`, and the server totals. The page shows that reference, or a clear error when the dates were just taken.
 
+## Owner decision page
+
+The owner email contains two links, Approve and Reject. Each link is a signed token for that one booking and that one purpose. The signature is HMAC-SHA256 with `APPROVAL_SECRET`. The token expires at the same instant as the 72-hour hold. It carries the booking id, the purpose (`approve` or `reject`), and the expiry. It does not carry the guest's name, email, or phone.
+
+`GET /decide?token=...` shows a short HTML page from the Worker: the stay, the guest, the price, and Approve / Reject buttons. The page has no scripts and no images. It uses the villa gold and tan (`#c1a367`, `#f7f1e4`, `#fffcf7`). `GET` does not change the booking, so a mail scanner or link preview cannot confirm or decline it. A `POST` of the email URL, without the button's token in the body, does not change it either.
+
+`POST /decide` reads the token from the form body. An approve token moves `pending` to `confirmed` only when the hold has not expired and this booking still owns every night of the stay. That check is in the same `UPDATE` as the status change. If another stay has taken the nights, the request stays `pending` and the page says the dates are no longer free. A reject token sets `rejected` and deletes that booking's occupied nights in one batch, so the dates can be requested again.
+
+Doing the same thing again does not send another email. The page says the booking is already confirmed or already declined. An expired hold, or a token whose signature does not match, shows its own message and does not change a decided booking. Confirmed bookings are not turned back into rejected ones by an old reject link.
+
+The page is sent with `Cache-Control: no-store` and `Referrer-Policy: no-referrer`. Owner mail is sent only to the single address in `OWNER_EMAIL`. A value with more than one address is not used.
+
 ## Emails
 
 The module is `worker/src/email.js`. It POSTs to a Resend-style endpoint. With no API key, or a placeholder sender or recipient, it logs `{ "event": "email_dry_run", "to", "subject", "text" }` and does not call the network.
 
-Sent today:
+Sent when a request is saved:
 
 - Guest: request received, including the reference, dates, price breakdown, and the 72-hour hold. No bank details.
-- Owner: the same request, plus the guest's phone and message.
+- Owner: the same request, plus the guest's phone and message, and the Approve and Reject links when `APPROVAL_SECRET` is set. The owner address is `OWNER_EMAIL` only.
 
-Prepared for later, and used by tests and by `confirmBookingAndEmail()`:
+Sent when the owner approves:
 
-- Confirmation invoice, plain text and simple HTML, all in the body. Reference, dates, itemised GBP lines, the refundable deposit to be paid first by bank transfer, the balance due 6 weeks before arrival, and the bank lines. A copy goes to the owner.
-- Balance reminder 7 weeks before arrival, with a copy to the owner. The cron claims `balance_reminder_sent_at` before sending. A failed guest send clears the flag so the next run can retry. A second successful run does not send again.
+- Guest: the confirmation invoice, plain text and simple HTML, all in the body. Reference, dates, itemised GBP lines, the refundable deposit of £300 to be paid first by bank transfer, the balance due 6 weeks before arrival, and the bank lines. Empty bank secrets are printed as `[PLACEHOLDER]`.
+- Owner: a short note that they approved that booking. It is not a second copy of the invoice.
+
+Sent when the owner rejects:
+
+- Guest: a short decline. It names the reference and the dates, says the dates are no longer held, and does not include bank details.
+- Owner: a short note that they declined that booking and the dates are free.
+
+The balance reminder, 7 weeks before arrival, is unchanged: it goes to the guest, with a copy to the owner. The cron claims `balance_reminder_sent_at` before sending. A failed guest send clears the flag so the next run can retry. A second successful run does not send again. The reminder query only selects `confirmed` bookings. Pending and rejected bookings are not reminded.
+
+A failed guest email does not undo the decision. Pressing the button again does not send a second message. The page says when email is not configured, or when the send failed.
 
 There is no PDF.
 
@@ -156,13 +178,13 @@ There is no PDF.
 The hourly cron does two jobs:
 
 1. Sets `pending` bookings with `expires_at <= now` to `expired` and deletes their occupied nights. The same expiry also runs at the start of availability and booking requests, so the calendar does not wait for the hour.
-2. Finds `confirmed` bookings whose arrival is exactly 49 days after today's date in `Europe/London` and whose reminder flag is empty, then sends the balance reminder once.
+2. Finds `confirmed` bookings whose arrival is exactly 49 days after today's date in `Europe/London` and whose reminder flag is empty, then sends the balance reminder once, with a copy to `OWNER_EMAIL`. Pending, rejected, expired, and cancelled bookings are not selected.
 
 A day the cron misses is not backfilled. The reminder is exactly 7 weeks out, not "7 weeks or later".
 
 ## Data
 
-`worker/migrations/0001_init.sql` creates `bookings`, `blocked_ranges`, `occupied_nights`, and `rate_limits`. Status values are `pending`, `confirmed`, `rejected`, `expired`, and `cancelled`. This change only writes `pending`, `confirmed` (via the internal confirm function), and `expired`. Rejected and cancelled are reserved for the approval change. That change must delete `occupied_nights` for a booking it releases.
+`worker/migrations/0001_init.sql` creates `bookings`, `blocked_ranges`, `occupied_nights`, and `rate_limits`. Status values are `pending`, `confirmed`, `rejected`, `expired`, and `cancelled`. Requests are saved as `pending`. Approval writes `confirmed` and keeps the nights. Rejection writes `rejected` and deletes that booking's occupied nights. Expiry writes `expired` and deletes the nights. `cancelled` is unused. No new migration is required for approval.
 
 `expires_at` is `created_at` plus 72 hours. The hold ends at that instant.
 
@@ -174,7 +196,7 @@ The published block is inserted by the migration. Editing `data/availability.jso
 TZ=UTC node --test tests/price-stay.test.js tests/booking-page.test.js worker/test/backend.test.js
 ```
 
-The API tests use Node's built-in SQLite and the same SQL file. They cover pricing parity with the page, same-day turnover, the blocked range, expiry at 72 hours, reminder selection, the invoice placeholders, rate limiting, and CORS. Node may print an experimental SQLite warning.
+The API tests use Node's built-in SQLite and the same SQL file. They cover pricing parity with the page, same-day turnover, the blocked range, expiry at 72 hours, reminder selection, the invoice placeholders, rate limiting, and CORS. They also cover approval tokens (valid, expired, tampered, and signed with the wrong secret), a `GET` that does not decide, a `POST` of the email URL that does not decide, idempotent approve and reject, the overlap check when the nights have been taken, decline and invoice email wording, and that the reminder cron ignores pending and rejected bookings. Node may print an experimental SQLite warning.
 
 ## Deployed
 
@@ -186,3 +208,5 @@ The Worker is published at `https://florida-rotonda-villa-api.rotonda-villa.work
 - A live email provider, DNS for the sender, and delivery to a real inbox
 - A booking submitted from the production domains or the Netlify deploy preview in a browser (the allow-list is unit tested, and preflight checks can be run with curl against the workers.dev URL)
 - Custom domains on the Worker, and dashboard logs
+- `APPROVAL_SECRET` on the deployed Worker, and opening a real approval link from an inbox (token checks and the HTML page are unit tested)
+- Mailbox scanners against the live `/decide` URL (unit tests cover `GET` and a `POST` that does not include the button token)

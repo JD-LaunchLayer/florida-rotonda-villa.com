@@ -1,7 +1,7 @@
 import { handleRequest } from "./http.js";
 import { runScheduled } from "./scheduled.js";
 
-// There is no public approve or reject route. confirmBooking() is internal.
+// GET /decide shows the owner page. Only POST /decide approves or rejects.
 export default {
   async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
     return handleRequest(request, env);

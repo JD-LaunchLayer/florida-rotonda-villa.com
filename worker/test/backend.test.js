@@ -15,17 +15,19 @@ import {
   rangesOverlap,
   REMINDER_DAYS_BEFORE_ARRIVAL,
 } from '../src/dates.js';
-import { confirmBooking, consumeRateLimit } from '../src/db.js';
-import { bankDetails, emailConfigured, sendEmail } from '../src/email.js';
+import { confirmBooking, consumeRateLimit, getBooking, rejectBooking } from '../src/db.js';
+import { bankDetails, emailConfigured, ownerAddress, sendEmail } from '../src/email.js';
 import { handleRequest } from '../src/http.js';
-import { confirmBookingAndEmail } from '../src/notifications.js';
+import { confirmBookingAndEmail, decideAndEmail, sendRequestEmails } from '../src/notifications.js';
 import { computeQuote, toBreakdown } from '../src/pricing.js';
 import { runScheduled } from '../src/scheduled.js';
-import { balanceReminderEmail, confirmationEmail, ownerReminderCopy, requestReceivedEmail } from '../src/templates.js';
+import { balanceReminderEmail, confirmationEmail, declineEmail, ownerDecisionEmail, ownerReminderCopy, requestReceivedEmail } from '../src/templates.js';
+import { signDecisionToken, verifyDecisionToken } from '../src/tokens.js';
 
 const workerRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const repoRoot = path.join(workerRoot, '..');
 const NOW = new Date('2026-05-01T15:00:00.000Z');
+const TEST_APPROVAL_SECRET = 'test-only-approval-secret-32chars';
 
 function openDb() {
   const sqlite = new DatabaseSync(':memory:');
@@ -81,6 +83,7 @@ function testEnv(db, extra = {}) {
     ALLOWED_ORIGINS: 'https://florida-rotonda-villa.com,https://www.florida-rotonda-villa.com,https://florida-rotonda-villa.co.uk,https://www.florida-rotonda-villa.co.uk',
     PROPERTY_TIMEZONE: 'America/New_York',
     REMINDER_TIMEZONE: 'Europe/London',
+    APPROVAL_SECRET: TEST_APPROVAL_SECRET,
     ...extra,
   };
 }
@@ -307,7 +310,7 @@ test('pending holds expire 72 hours after they are created and free the nights',
   assert.equal(confirmed.error, 'expired');
 });
 
-test('confirmBooking is internal, keeps the nights, and the invoice email carries placeholders', async () => {
+test('confirming a booking keeps the nights, is idempotent, and the invoice carries placeholders', async () => {
   const db = openDb();
   const created = await postBooking(db, payload({
     arrival: '2026-10-01',
@@ -326,7 +329,7 @@ test('confirmBooking is internal, keeps the nights, and the invoice email carrie
   assert.equal(nights.n, 10);
 
   const again = await confirmBooking(db, id, NOW);
-  assert.equal(again.error, 'not_pending');
+  assert.equal(again.error, 'already_confirmed');
 
   const invoice = sent[0];
   assert.match(invoice.subject, new RegExp(id));
@@ -336,10 +339,16 @@ test('confirmBooking is internal, keeps the nights, and the invoice email carrie
   assert.match(invoice.text, /Account name: \[PLACEHOLDER\]/);
   assert.match(invoice.text, /Sort code: \[PLACEHOLDER\]/);
   assert.match(invoice.text, /Account number: \[PLACEHOLDER\]/);
+  assert.match(invoice.text, /£300/);
+  assert.match(invoice.text, /bank transfer/);
   assert.match(invoice.html, /Booking reference/);
+  assert.match(invoice.html, /£300/);
   assert.equal(invoice.html.includes('<pdf'), false);
-  assert.match(sent[1].subject, /^Copy:/);
+  assert.equal(invoice.attachments, undefined);
+  assert.match(sent[1].subject, /You approved/);
+  assert.equal(sent[1].to, 'owner@example.com');
   assert.match(sent[1].text, /ada@guest.test/);
+  assert.equal(sent[1].text.includes('Account number'), false);
 
   const direct = confirmationEmail(confirmed.booking, {});
   assert.deepEqual(bankDetails({}), {
@@ -370,8 +379,10 @@ test('balance reminders are selected exactly seven weeks before arrival and send
   await confirmBooking(db, created.json.id, NOW);
 
   const calls = [];
+  const recipients = [];
   const send = async (_env, message) => {
     calls.push(message.subject);
+    recipients.push(message.to);
     return { dryRun: false, ok: true };
   };
   const first = await runScheduled(testEnv(db), NOW, { sendEmail: send });
@@ -379,6 +390,8 @@ test('balance reminders are selected exactly seven weeks before arrival and send
   assert.equal(calls.length, 2);
   assert.match(calls[0], /Balance reminder/);
   assert.match(calls[1], /^Copy:/);
+  assert.equal(recipients[0], 'ada@guest.test');
+  assert.equal(recipients[1], 'owner@example.com');
 
   const reminderBooking = {
     id: created.json.id,
@@ -489,11 +502,343 @@ test('CORS allows the villa domains and Netlify previews only', () => {
   assert.equal(isAllowedOrigin('https://custom.example', { ...env, ALLOWED_ORIGINS: 'https://custom.example' }), true);
 });
 
+function decisionUrl(text, label) {
+  const match = text.match(new RegExp(label + ': (https://\\S+)'));
+  assert.ok(match, label);
+  return new URL(match[1]);
+}
+
+function formToken(html, action) {
+  const match = html.match(new RegExp('data-action="' + action + '"[\\s\\S]*?name="token" value="([^"]+)"'));
+  assert.ok(match, action);
+  return match[1];
+}
+
+function postDecision(token, ip = '203.0.113.77') {
+  return new Request('https://florida-rotonda-villa-api.example.workers.dev/decide', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'CF-Connecting-IP': ip,
+    },
+    body: new URLSearchParams({ token }).toString(),
+  });
+}
+
+test('decision tokens are single purpose, expire, and fail when tampered', async () => {
+  const exp = '2026-08-01T00:00:00.000Z';
+  const token = await signDecisionToken(TEST_APPROVAL_SECRET, { id: 'FRV-AABBCCDD', purpose: 'approve', exp });
+  const valid = await verifyDecisionToken(TEST_APPROVAL_SECRET, token, NOW);
+  assert.equal(valid.ok, true);
+  assert.equal(valid.claims.id, 'FRV-AABBCCDD');
+  assert.equal(valid.claims.purpose, 'approve');
+  assert.equal(valid.claims.exp, exp);
+
+  const otherSecret = await verifyDecisionToken(`${TEST_APPROVAL_SECRET}-other`, token, NOW);
+  assert.equal(otherSecret.ok, false);
+  assert.equal(otherSecret.error, 'invalid');
+
+  const [payload, signature] = token.split('.');
+  const flippedPayload = payload.slice(0, -1) + (payload.endsWith('A') ? 'B' : 'A');
+  const tamperedPayload = await verifyDecisionToken(TEST_APPROVAL_SECRET, `${flippedPayload}.${signature}`, NOW);
+  assert.equal(tamperedPayload.error, 'invalid');
+  const flippedSignature = signature.slice(0, -1) + (signature.endsWith('a') ? 'b' : 'a');
+  const tamperedSignature = await verifyDecisionToken(TEST_APPROVAL_SECRET, `${payload}.${flippedSignature}`, NOW);
+  assert.equal(tamperedSignature.error, 'invalid');
+
+  const expiredToken = await signDecisionToken(TEST_APPROVAL_SECRET, {
+    id: 'FRV-AABBCCDD',
+    purpose: 'reject',
+    exp: '2026-05-01T15:00:00.000Z',
+  });
+  const atExpiry = await verifyDecisionToken(TEST_APPROVAL_SECRET, expiredToken, new Date('2026-05-01T15:00:00.000Z'));
+  assert.equal(atExpiry.error, 'expired');
+  assert.equal(atExpiry.claims.purpose, 'reject');
+  const beforeExpiry = await verifyDecisionToken(TEST_APPROVAL_SECRET, expiredToken, new Date('2026-05-01T14:59:59.999Z'));
+  assert.equal(beforeExpiry.ok, true);
+
+  const missing = await verifyDecisionToken('', token, NOW);
+  assert.equal(missing.error, 'not_configured');
+  await assert.rejects(() => signDecisionToken('too-short', { id: 'FRV-AABBCCDD', purpose: 'view', exp }));
+});
+
+test('opening an approval link does not decide, and a second POST is idempotent', async () => {
+  const db = openDb();
+  const created = await postBooking(db, payload({ message: '<script>alert(1)</script>' }));
+  const id = created.json.id;
+  const approveUrl = decisionUrl(created.sent[1].text, 'Approve');
+  const rejectUrl = decisionUrl(created.sent[1].text, 'Reject');
+  assert.equal(approveUrl.pathname, '/decide');
+  assert.notEqual(approveUrl.searchParams.get('token'), rejectUrl.searchParams.get('token'));
+
+  const preview = await handleRequest(new Request(approveUrl, {
+    headers: { 'CF-Connecting-IP': '203.0.113.77' },
+  }), testEnv(db), {
+    now: NOW,
+    sendEmail: async () => { throw new Error('GET must not send email'); },
+  });
+  const previewHtml = await preview.text();
+  assert.equal(preview.status, 200);
+  assert.match(preview.headers.get('content-type'), /text\/html/);
+  assert.equal(preview.headers.get('cache-control'), 'no-store');
+  assert.equal(preview.headers.get('referrer-policy'), 'no-referrer');
+  assert.match(previewHtml, /#c1a367/);
+  assert.match(previewHtml, /Approve/);
+  assert.match(previewHtml, /Reject/);
+  assert.match(previewHtml, /Ada Guest/);
+  assert.equal(previewHtml.includes('<script>'), false);
+  assert.match(previewHtml, /&lt;script&gt;/);
+  const stillPending = await db.prepare(`SELECT status FROM bookings WHERE id = ?`).bind(id).first();
+  assert.equal(stillPending.status, 'pending');
+
+  const scanned = await handleRequest(new Request(approveUrl, {
+    method: 'POST',
+    headers: { 'CF-Connecting-IP': '203.0.113.77' },
+  }), testEnv(db), {
+    now: NOW,
+    sendEmail: async () => { throw new Error('POST of the email URL must not send email'); },
+  });
+  assert.equal(scanned.status, 400);
+  const afterScan = await db.prepare(`SELECT status FROM bookings WHERE id = ?`).bind(id).first();
+  assert.equal(afterScan.status, 'pending');
+
+  const row = await db.prepare(`SELECT expires_at FROM bookings WHERE id = ?`).bind(id).first();
+  const viewToken = await signDecisionToken(TEST_APPROVAL_SECRET, { id, purpose: 'view', exp: row.expires_at });
+  const viewPost = await handleRequest(postDecision(viewToken), testEnv(db), {
+    now: NOW,
+    sendEmail: async () => { throw new Error('view token must not send email'); },
+  });
+  assert.equal(viewPost.status, 200);
+  assert.match(await viewPost.text(), /Nothing was changed/);
+  const afterView = await db.prepare(`SELECT status FROM bookings WHERE id = ?`).bind(id).first();
+  assert.equal(afterView.status, 'pending');
+
+  const sent = [];
+  const approved = await handleRequest(postDecision(formToken(previewHtml, 'approve')), testEnv(db), {
+    now: NOW,
+    sendEmail: async (_env, message) => {
+      sent.push(message);
+      return { dryRun: false, ok: true };
+    },
+  });
+  const approvedHtml = await approved.text();
+  assert.equal(approved.status, 200);
+  assert.match(approvedHtml, /You approved this booking/);
+  assert.match(approvedHtml, /has been emailed/);
+  assert.equal(approvedHtml.includes('data-action="approve"'), false);
+  assert.equal(sent.length, 2);
+  assert.equal(sent[0].to, 'ada@guest.test');
+  assert.match(sent[0].subject, new RegExp(`Booking confirmed ${id}`));
+  assert.match(sent[0].text, /paid first, by bank transfer/);
+  assert.match(sent[0].text, /£300/);
+  assert.match(sent[0].text, /6 weeks before arrival/);
+  assert.match(sent[0].text, /Account name: \[PLACEHOLDER\]/);
+  assert.match(sent[0].html, /£300/);
+  assert.equal(sent[0].attachments, undefined);
+  assert.equal(sent[1].to, 'owner@example.com');
+  assert.match(sent[1].subject, /You approved/);
+  assert.equal(sent[1].text.includes('Account number'), false);
+  const confirmed = await db.prepare(`SELECT status FROM bookings WHERE id = ?`).bind(id).first();
+  assert.equal(confirmed.status, 'confirmed');
+  const nights = await db.prepare(`SELECT COUNT(*) AS n FROM occupied_nights WHERE booking_id = ?`).bind(id).first();
+  assert.equal(nights.n, 7);
+
+  const again = await handleRequest(postDecision(approveUrl.searchParams.get('token')), testEnv(db), {
+    now: NOW,
+    sendEmail: async () => { throw new Error('second approve must not send email'); },
+  });
+  assert.equal(again.status, 200);
+  assert.match(await again.text(), /already confirmed/);
+  const rejectAfter = await handleRequest(postDecision(rejectUrl.searchParams.get('token')), testEnv(db), {
+    now: NOW,
+    sendEmail: async () => { throw new Error('reject after approve must not send email'); },
+  });
+  assert.match(await rejectAfter.text(), /already confirmed/);
+  const unchanged = await db.prepare(`SELECT status FROM bookings WHERE id = ?`).bind(id).first();
+  assert.equal(unchanged.status, 'confirmed');
+});
+
+test('reject frees the dates, is idempotent, and the decline email has no bank details', async () => {
+  const db = openDb();
+  const created = await postBooking(db, payload());
+  const id = created.json.id;
+  const rejectUrl = decisionUrl(created.sent[1].text, 'Reject');
+  const sent = [];
+  const declined = await handleRequest(postDecision(rejectUrl.searchParams.get('token'), '203.0.113.78'), testEnv(db), {
+    now: NOW,
+    sendEmail: async (_env, message) => {
+      sent.push(message);
+      return { dryRun: false, ok: true };
+    },
+  });
+  assert.equal(declined.status, 200);
+  assert.match(await declined.text(), /You declined this request/);
+  assert.match(sent[0].text, /sorry we cannot confirm/);
+  assert.match(sent[0].text, new RegExp(id));
+  assert.equal(sent[0].to, 'ada@guest.test');
+  assert.equal(sent[0].text.includes('Account number'), false);
+  assert.equal(sent[0].text.includes('[PLACEHOLDER]'), false);
+  assert.equal(sent[0].text.includes('bank transfer'), false);
+  assert.match(sent[0].html, /sorry we cannot confirm/);
+  assert.equal(sent[1].to, 'owner@example.com');
+  assert.match(sent[1].subject, /You declined/);
+  const row = await db.prepare(`SELECT status FROM bookings WHERE id = ?`).bind(id).first();
+  assert.equal(row.status, 'rejected');
+  const nights = await db.prepare(`SELECT COUNT(*) AS n FROM occupied_nights WHERE booking_id = ?`).bind(id).first();
+  assert.equal(nights.n, 0);
+
+  const again = await handleRequest(postDecision(rejectUrl.searchParams.get('token'), '203.0.113.78'), testEnv(db), {
+    now: NOW,
+    sendEmail: async () => { throw new Error('second reject must not send email'); },
+  });
+  assert.match(await again.text(), /already declined/);
+
+  const retry = await postBooking(db, payload({ email: 'next@guest.test' }));
+  assert.equal(retry.response.status, 201, JSON.stringify(retry.json));
+
+  const direct = declineEmail({
+    id,
+    arrival: '2026-05-06',
+    departure: '2026-05-13',
+    guest_first_name: 'Ada',
+    guest_email: 'ada@guest.test',
+  }, {});
+  assert.equal(direct.text.includes('Account number'), false);
+  const owner = ownerDecisionEmail({
+    id,
+    arrival: '2026-05-06',
+    departure: '2026-05-13',
+    guest_first_name: 'Ada',
+    guest_last_name: 'Guest',
+    guest_email: 'ada@guest.test',
+  }, { OWNER_EMAIL: 'owner@example.com' }, 'reject');
+  assert.equal(owner.to, 'owner@example.com');
+  assert.ok(owner.text.length < 500);
+});
+
+test('approve refuses a stay whose nights were taken, and a later token cannot revive an expired hold', async () => {
+  const db = openDb();
+  const created = await postBooking(db, payload());
+  const id = created.json.id;
+  const approveToken = decisionUrl(created.sent[1].text, 'Approve').searchParams.get('token');
+  await db.prepare(`DELETE FROM occupied_nights WHERE booking_id = ?`).bind(id).run();
+  const other = await postBooking(db, payload({ email: 'other@guest.test' }), { ip: '203.0.113.90' });
+  assert.equal(other.response.status, 201, JSON.stringify(other.json));
+
+  const raced = await handleRequest(postDecision(approveToken, '203.0.113.91'), testEnv(db), {
+    now: NOW,
+    sendEmail: async () => { throw new Error('overlap must not send email'); },
+  });
+  const racedHtml = await raced.text();
+  assert.equal(raced.status, 409);
+  assert.match(racedHtml, /no longer free/);
+  const leftPending = await db.prepare(`SELECT status FROM bookings WHERE id = ?`).bind(id).first();
+  assert.equal(leftPending.status, 'pending');
+  const otherNights = await db.prepare(`SELECT COUNT(*) AS n FROM occupied_nights WHERE booking_id = ?`).bind(other.json.id).first();
+  assert.equal(otherNights.n, 7);
+
+  const cleared = await handleRequest(postDecision(formToken(racedHtml, 'reject'), '203.0.113.91'), testEnv(db), {
+    now: NOW,
+    sendEmail: async () => ({ dryRun: false, ok: true }),
+  });
+  assert.equal(cleared.status, 200);
+  const rejected = await db.prepare(`SELECT status FROM bookings WHERE id = ?`).bind(id).first();
+  assert.equal(rejected.status, 'rejected');
+  const availability = await handleRequest(request('/api/availability'), testEnv(db), { now: NOW });
+  const ranges = (await availability.json()).ranges.filter((range) => range.checkIn === '2026-05-06');
+  assert.equal(ranges.length, 1);
+  assert.equal(ranges[0].checkOut, '2026-05-13');
+
+  const expiredDb = openDb();
+  const expiring = await postBooking(expiredDb, payload({ email: 'late@guest.test' }));
+  const expires = await expiredDb.prepare(`SELECT expires_at FROM bookings WHERE id = ?`).bind(expiring.json.id).first();
+  await runScheduled(testEnv(expiredDb), new Date(expires.expires_at));
+  const future = await signDecisionToken(TEST_APPROVAL_SECRET, {
+    id: expiring.json.id,
+    purpose: 'approve',
+    exp: '2099-01-01T00:00:00.000Z',
+  });
+  const late = await handleRequest(postDecision(future, '203.0.113.92'), testEnv(expiredDb), {
+    now: new Date(expires.expires_at),
+    sendEmail: async () => { throw new Error('expired approve must not send email'); },
+  });
+  assert.equal(late.status, 410);
+  assert.match(await late.text(), /expired/);
+  const expired = await expiredDb.prepare(`SELECT status FROM bookings WHERE id = ?`).bind(expiring.json.id).first();
+  assert.equal(expired.status, 'expired');
+});
+
+test('bank lines come from env, owner mail is one address, and reminders skip pending and rejected', async () => {
+  const db = openDb();
+  const created = await postBooking(db, payload({
+    arrival: '2026-10-01',
+    departure: '2026-10-08',
+    extras: { poolHeat: true, cot: false, highChair: false },
+  }));
+  const sent = [];
+  const confirmed = await decideAndEmail(db, testEnv(db, {
+    BANK_ACCOUNT_NAME: 'TEST NAME',
+    BANK_SORT_CODE: 'TEST-SORT',
+    BANK_ACCOUNT_NUMBER: 'TEST-ACCT',
+  }), created.json.id, 'approve', NOW, async (_env, message) => {
+    sent.push(message);
+    return { dryRun: false, ok: true };
+  });
+  assert.equal(confirmed.ok, true);
+  assert.match(sent[0].text, /Account name: TEST NAME/);
+  assert.match(sent[0].text, /Sort code: TEST-SORT/);
+  assert.match(sent[0].text, /Account number: TEST-ACCT/);
+  assert.match(sent[0].text, /6 weeks before arrival/);
+  assert.match(sent[0].html, /TEST-ACCT/);
+  assert.match(confirmationEmail(confirmed.booking, {}).text, /\[PLACEHOLDER\]/);
+
+  const ownerSends = [];
+  const stored = await getBooking(db, created.json.id);
+  await sendRequestEmails({
+    ...testEnv(db),
+    OWNER_EMAIL: 'one@example.com, two@example.com',
+  }, stored, async (_env, message) => {
+    ownerSends.push(message);
+    return { dryRun: true, ok: true };
+  }, 'https://florida-rotonda-villa-api.example.workers.dev');
+  assert.equal(ownerSends.length, 1);
+  assert.equal(ownerSends[0].to, stored.guest_email);
+  assert.equal(ownerAddress({ OWNER_EMAIL: 'one@example.com, two@example.com' }), null);
+  assert.equal(ownerAddress({ OWNER_EMAIL: 'owner@example.com' }), 'owner@example.com');
+
+  const pendingDb = openDb();
+  const pending = await postBooking(pendingDb, payload({
+    arrival: '2026-06-19',
+    departure: '2026-06-26',
+    email: 'pend@guest.test',
+  }));
+  const skipped = await runScheduled(testEnv(pendingDb), NOW, {
+    sendEmail: async () => { throw new Error('pending must not be reminded'); },
+  });
+  assert.deepEqual(skipped.reminders, []);
+  await rejectBooking(pendingDb, pending.json.id, NOW);
+  const skippedRejected = await runScheduled(testEnv(pendingDb), NOW, {
+    sendEmail: async () => { throw new Error('rejected must not be reminded'); },
+  });
+  assert.deepEqual(skippedRejected.reminders, []);
+
+  const unavailable = await handleRequest(new Request('https://florida-rotonda-villa-api.example.workers.dev/decide?token=missing'), testEnv(db, {
+    APPROVAL_SECRET: '',
+  }), { now: NOW });
+  assert.equal(unavailable.status, 503);
+  assert.match(await unavailable.text(), /not available/);
+});
+
 test('repository copies do not contain real bank details', () => {
   const files = [
     'worker/src/email.js',
     'worker/src/templates.js',
+    'worker/src/tokens.js',
+    'worker/src/decide.js',
+    'worker/src/page.js',
+    'worker/src/notifications.js',
     'worker/wrangler.jsonc',
+    'worker/.dev.vars.example',
     'docs/BACKEND.md',
   ];
   for (const file of files) {
@@ -503,5 +848,6 @@ test('repository copies do not contain real bank details', () => {
     assert.equal(/\b\d{2}-\d{2}-\d{2}\b/.test(text.replace(/\d{4}-\d{2}-\d{2}/g, '')), false, file);
     assert.equal(text.includes('sk_live'), false, file);
     assert.equal(text.includes('re_'), false, file);
+    assert.equal(text.includes(TEST_APPROVAL_SECRET), false, file);
   }
 });

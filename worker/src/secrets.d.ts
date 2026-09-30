@@ -6,5 +6,6 @@ interface Env {
   BANK_ACCOUNT_NAME?: string;
   BANK_SORT_CODE?: string;
   BANK_ACCOUNT_NUMBER?: string;
+  APPROVAL_SECRET?: string;
   ALLOW_LOCALHOST?: string;
 }
