@@ -16,12 +16,12 @@ import {
   REMINDER_DAYS_BEFORE_ARRIVAL,
 } from '../src/dates.js';
 import { confirmBooking, consumeRateLimit, getBooking, rejectBooking } from '../src/db.js';
-import { bankDetails, emailConfigured, ownerAddress, sendEmail } from '../src/email.js';
+import { bankDetails, emailConfigured, ownerAddress, replyToAddress, sendEmail } from '../src/email.js';
 import { handleRequest } from '../src/http.js';
 import { confirmBookingAndEmail, decideAndEmail, sendRequestEmails } from '../src/notifications.js';
 import { computeQuote, toBreakdown } from '../src/pricing.js';
 import { runScheduled } from '../src/scheduled.js';
-import { balanceReminderEmail, confirmationEmail, declineEmail, ownerDecisionEmail, ownerReminderCopy, requestReceivedEmail } from '../src/templates.js';
+import { balanceReminderEmail, confirmationEmail, declineEmail, ownerDecisionEmail, ownerReminderCopy, ownerRequestEmail, requestReceivedEmail } from '../src/templates.js';
 import { signDecisionToken, verifyDecisionToken } from '../src/tokens.js';
 
 const workerRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -467,6 +467,15 @@ test('posting is rate limited and dry-run email does not call the provider', asy
   assert.equal(dry.dryRun, true);
   assert.equal(called, false);
   assert.equal(emailConfigured(testEnv(db)), false);
+  const missingFrom = await sendEmail({
+    EMAIL_API_KEY: 'test-key',
+    EMAIL_FROM: '',
+  }, { to: 'ada@guest.test', subject: 'Hi', text: 'Body', html: '<p>Body</p>' }, () => {
+    called = true;
+    throw new Error('missing EMAIL_FROM must not send');
+  });
+  assert.equal(missingFrom.dryRun, true);
+  assert.equal(called, false);
 
   const live = await sendEmail({
     EMAIL_API_KEY: 'test-key',
@@ -805,6 +814,19 @@ test('bank lines come from env, owner mail is one address, and reminders skip pe
   assert.equal(ownerSends[0].to, stored.guest_email);
   assert.equal(ownerAddress({ OWNER_EMAIL: 'one@example.com, two@example.com' }), null);
   assert.equal(ownerAddress({ OWNER_EMAIL: 'owner@example.com' }), 'owner@example.com');
+  assert.equal(ownerAddress({ OWNER_EMAIL: '' }), null);
+
+  const unsetOwner = [];
+  const unset = await sendRequestEmails({
+    ...testEnv(db),
+    OWNER_EMAIL: '',
+  }, stored, async (_env, message) => {
+    unsetOwner.push(message);
+    return { dryRun: false, ok: true };
+  }, 'https://florida-rotonda-villa-api.example.workers.dev');
+  assert.equal(unsetOwner.length, 1);
+  assert.equal(unsetOwner[0].to, stored.guest_email);
+  assert.equal(unset.owner.dryRun, true);
 
   const pendingDb = openDb();
   const pending = await postBooking(pendingDb, payload({
@@ -827,6 +849,74 @@ test('bank lines come from env, owner mail is one address, and reminders skip pe
   }), { now: NOW });
   assert.equal(unavailable.status, 503);
   assert.match(await unavailable.text(), /not available/);
+});
+
+test('guest emails carry reply_to from REPLY_TO, or from OWNER_EMAIL when that is unset', async () => {
+  const booking = {
+    id: 'FRV-REPLYTO1',
+    arrival: '2026-10-06',
+    departure: '2026-10-13',
+    guests: 2,
+    guest_first_name: 'Ada',
+    guest_last_name: 'Guest',
+    guest_email: 'ada@guest.test',
+    guest_phone: null,
+    message: null,
+    expires_at: '2026-10-03T20:00:00.000Z',
+    breakdown: toBreakdown(computeQuote('2026-10-06', '2026-10-13', {})),
+  };
+  const owner = 'inbox@sky.test';
+  const reply = 'replies@sky.test';
+  const guestMails = [
+    requestReceivedEmail(booking, { REPLY_TO: reply, OWNER_EMAIL: owner }),
+    declineEmail(booking, { REPLY_TO: reply, OWNER_EMAIL: owner }),
+    confirmationEmail(booking, { REPLY_TO: reply, OWNER_EMAIL: owner }),
+    balanceReminderEmail(booking, { REPLY_TO: reply, OWNER_EMAIL: owner }),
+  ];
+  for (const mail of guestMails) {
+    assert.equal(mail.to, 'ada@guest.test');
+    assert.equal(mail.replyTo, reply);
+  }
+  assert.equal(requestReceivedEmail(booking, { OWNER_EMAIL: owner }).replyTo, owner);
+  assert.equal(replyToAddress({ OWNER_EMAIL: owner }), owner);
+  assert.equal(replyToAddress({}), null);
+  assert.equal(replyToAddress({ REPLY_TO: 'a@sky.test, b@sky.test', OWNER_EMAIL: owner }), null);
+
+  const notice = ownerRequestEmail(booking, { REPLY_TO: reply, OWNER_EMAIL: owner }, null);
+  assert.equal(notice.to, owner);
+  assert.equal(notice.replyTo, 'ada@guest.test');
+  const copy = ownerReminderCopy(booking, { REPLY_TO: reply, OWNER_EMAIL: owner });
+  assert.equal(copy.to, owner);
+  assert.equal(copy.replyTo, 'ada@guest.test');
+
+  const from = 'Florida Rotonda Villa <bookings@florida-rotonda-villa.com>';
+  let payload;
+  const sent = await sendEmail({
+    EMAIL_API_KEY: 'test-key',
+    EMAIL_FROM: from,
+    OWNER_EMAIL: owner,
+    REPLY_TO: reply,
+  }, requestReceivedEmail(booking, { REPLY_TO: reply, OWNER_EMAIL: owner }), async (_url, init) => {
+    payload = JSON.parse(init.body);
+    return new Response('{}', { status: 202 });
+  });
+  assert.equal(sent.dryRun, false);
+  assert.equal(payload.from, from);
+  assert.deepEqual(payload.to, ['ada@guest.test']);
+  assert.equal(payload.reply_to, reply);
+
+  let fallbackPayload;
+  await sendEmail({
+    EMAIL_API_KEY: 'test-key',
+    EMAIL_FROM: from,
+    OWNER_EMAIL: owner,
+  }, confirmationEmail(booking, { OWNER_EMAIL: owner }), async (_url, init) => {
+    fallbackPayload = JSON.parse(init.body);
+    return new Response('{}', { status: 202 });
+  });
+  assert.equal(fallbackPayload.from, from);
+  assert.equal(fallbackPayload.reply_to, owner);
+  assert.deepEqual(fallbackPayload.to, ['ada@guest.test']);
 });
 
 test('repository copies do not contain real bank details', () => {

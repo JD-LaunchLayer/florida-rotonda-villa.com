@@ -12,6 +12,16 @@ import {
 } from './templates.js';
 
 async function sendToOwner(env, message, send) {
+  const raw = String(env && env.OWNER_EMAIL || '').trim();
+  if (!raw) {
+    console.log(JSON.stringify({
+      event: 'email_dry_run',
+      to: [],
+      subject: message.subject,
+      text: message.text,
+    }));
+    return { dryRun: true, ok: true };
+  }
   const owner = ownerAddress(env);
   if (!owner) {
     console.log(JSON.stringify({ event: 'owner_email_not_single' }));

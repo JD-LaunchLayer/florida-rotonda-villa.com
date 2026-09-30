@@ -1,4 +1,4 @@
-import villaRates from '../../data/villa-rates.js';
+import { villaRates } from './load-villa-rates.js';
 import prices from '../../data/prices.json' with { type: 'json' };
 
 // Same rule as the booking page: data/villa-rates.js buildQuote / priceStay.

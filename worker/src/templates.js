@@ -1,5 +1,5 @@
 import { addDaysISO, formatLongDate, formatWhen } from './dates.js';
-import { bankDetails } from './email.js';
+import { bankDetails, replyToAddress } from './email.js';
 
 function formatGBP(amount) {
   if (amount == null || !Number.isFinite(Number(amount))) return 'the owner will confirm this amount';
@@ -114,7 +114,7 @@ export function requestReceivedEmail(booking, env) {
     '',
     'Florida Rotonda Villa',
   ];
-  return message(booking.guest_email, `Booking request received ${booking.id}`, lines, env.OWNER_EMAIL);
+  return message(booking.guest_email, `Booking request received ${booking.id}`, lines, replyToAddress(env));
 }
 
 export function ownerRequestEmail(booking, env, links) {
@@ -159,7 +159,7 @@ export function declineEmail(booking, env) {
     '',
     'Florida Rotonda Villa',
   ];
-  return message(booking.guest_email, `Booking request declined ${booking.id}`, lines, env.OWNER_EMAIL);
+  return message(booking.guest_email, `Booking request declined ${booking.id}`, lines, replyToAddress(env));
 }
 
 export function ownerDecisionEmail(booking, env, action) {
@@ -197,7 +197,7 @@ export function confirmationEmail(booking, env) {
     '',
     'Florida Rotonda Villa',
   ];
-  return message(booking.guest_email, `Booking confirmed ${booking.id}`, lines, env.OWNER_EMAIL);
+  return message(booking.guest_email, `Booking confirmed ${booking.id}`, lines, replyToAddress(env));
 }
 
 // The approval flow sends ownerDecisionEmail. This copy remains for comparison with the guest invoice.
@@ -225,7 +225,7 @@ export function balanceReminderEmail(booking, env) {
     '',
     'Florida Rotonda Villa',
   ];
-  return message(booking.guest_email, `Balance reminder ${booking.id}`, lines, env.OWNER_EMAIL);
+  return message(booking.guest_email, `Balance reminder ${booking.id}`, lines, replyToAddress(env));
 }
 
 export function ownerReminderCopy(booking, env) {

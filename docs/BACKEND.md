@@ -68,14 +68,15 @@ npx wrangler d1 migrations apply florida-rotonda-villa-db --local
 
 ## Secrets and variables
 
-Nothing secret belongs in the repo. `worker/wrangler.jsonc` holds the database id and non-secret vars. Bank details and the email API key stay in Worker secrets.
+Nothing secret belongs in the repo. `worker/wrangler.jsonc` holds the database id and non-secret vars. Bank details, the email API key, `EMAIL_FROM`, `OWNER_EMAIL`, and `REPLY_TO` are Worker secrets. They are not vars: a plain var with the same name blocks `wrangler secret put` with error 10053, "Binding name already in use". `EMAIL_FROM` is not listed under `vars`.
 
 | Name | How to set it | Placeholder behaviour |
 | --- | --- | --- |
 | `APPROVAL_SECRET` | `npx wrangler secret put APPROVAL_SECRET` | If this is missing, the booking is still saved and the guest still gets the request email. The owner email says the approval links are unavailable. Generate a long random value, for example with `openssl rand -base64 32`, and paste it into the secret prompt. Do not commit it. Use a new value for production; the test suite has its own fake secret. Changing this secret invalidates links that were already sent. Those holds still expire after 72 hours. |
 | `EMAIL_API_KEY` | `npx wrangler secret put EMAIL_API_KEY` | If this is missing, every email is logged as `email_dry_run` and nothing is sent. |
-| `EMAIL_FROM` | `npx wrangler secret put EMAIL_FROM` | The committed var is `Florida Rotonda Villa <bookings@example.com>`. A sender containing `example.com` does not send. Use a verified address such as `Florida Rotonda Villa <bookings@your-domain>`. |
-| `OWNER_EMAIL` | `npx wrangler secret put OWNER_EMAIL` | The committed var is `owner@example.com`. Mail to that address is logged, not sent. A secret overrides the var. |
+| `EMAIL_FROM` | `npx wrangler secret put EMAIL_FROM` | The From address on every email, guest and owner. If this is missing, every email is logged as `email_dry_run` and nothing is sent. A sender containing `example.com` also does not send. After the domain is verified, set `Florida Rotonda Villa <bookings@florida-rotonda-villa.com>`. It is a secret, not a var. |
+| `OWNER_EMAIL` | `npx wrangler secret put OWNER_EMAIL` | One address only. Owner notifications are sent only to this address. If this is missing, owner mail is logged as `email_dry_run` and nothing is sent to the owner. Guest mail still follows the `EMAIL_API_KEY` / `EMAIL_FROM` rules. A value with more than one address is not used. |
+| `REPLY_TO` | `npx wrangler secret put REPLY_TO` | Reply-To on guest emails only. If this is unset, guest Reply-To is `OWNER_EMAIL`. If this is set to more than one address, guest mail has no Reply-To. Owner notifications are still delivered only to `OWNER_EMAIL`, and those messages reply to the guest. |
 | `BANK_ACCOUNT_NAME` | `npx wrangler secret put BANK_ACCOUNT_NAME` | Empty becomes `[PLACEHOLDER]` in the email body. |
 | `BANK_SORT_CODE` | `npx wrangler secret put BANK_SORT_CODE` | Empty becomes `[PLACEHOLDER]`. |
 | `BANK_ACCOUNT_NUMBER` | `npx wrangler secret put BANK_ACCOUNT_NUMBER` | Empty becomes `[PLACEHOLDER]`. |
@@ -89,6 +90,25 @@ Nothing secret belongs in the repo. `worker/wrangler.jsonc` holds the database i
 Copy `worker/.dev.vars.example` to `worker/.dev.vars` for `npx wrangler dev`. `.dev.vars` is gitignored.
 
 Leave `EMAIL_API_KEY` unset until `EMAIL_FROM` and `OWNER_EMAIL` are real. With a key and an `example.com` sender, the Worker still dry-runs.
+
+### Send from the villa domain (Resend)
+
+Every message is sent from `EMAIL_FROM` on `florida-rotonda-villa.com`. Guest messages set Resend `reply_to` to `REPLY_TO`, or to `OWNER_EMAIL` when `REPLY_TO` is unset, so a guest reply reaches the owner. The owner address is not written into the source. Owner notifications go only to `OWNER_EMAIL`.
+
+1. In Resend, add the domain `florida-rotonda-villa.com`. Open its Records tab and copy every DKIM and SPF row. Resend generates the values. Older domains show `TXT` (and an `MX` for bounces). Domains added after August 2026 may show `CNAME` records, often on the `send` host. Add the rows exactly as shown. Do not type a key from memory.
+2. At IONOS, open Domains & SSL, select `florida-rotonda-villa.com`, then DNS, then add a record for each Resend row. Use the type Resend shows (`TXT`, `MX`, or `CNAME`). In the hostname field, enter only the label Resend gives (`send`, `resend._domainkey`, or blank / `@` for the root). IONOS appends the domain, so do not paste the full hostname if that would duplicate it. For an `MX`, set the priority Resend shows. Save each record. Do not proxy the records.
+3. In Resend, choose Verify DNS Records. Verification often finishes within 15 minutes and can take up to 72 hours. If it is still pending, use Restart verification. After the domain is verified, a DMARC `TXT` record on `_dmarc` can be added the same way; Resend shows that row too.
+4. Create an API key with **Sending access** only, restricted to `florida-rotonda-villa.com`. Do not create a full-access key for this Worker.
+5. From `worker/`, store the secrets. None of these names are in `wrangler.jsonc` `vars`.
+
+```bash
+npx wrangler secret put EMAIL_API_KEY
+npx wrangler secret put EMAIL_FROM
+npx wrangler secret put OWNER_EMAIL
+npx wrangler secret put APPROVAL_SECRET
+```
+
+`EMAIL_FROM` is `Florida Rotonda Villa <bookings@florida-rotonda-villa.com>`. `OWNER_EMAIL` is the single owner inbox. Add `npx wrangler secret put REPLY_TO` only when guest replies should go somewhere other than `OWNER_EMAIL`. `APPROVAL_SECRET` is a new long random value, for example from `openssl rand -base64 32`. Then `npx wrangler deploy`.
 
 Do not put real bank details in `wrangler.jsonc`, source, or this file. Set them with `wrangler secret put` when the account is ready. Confirmation and balance emails print whatever those secrets are, or `[PLACEHOLDER]`.
 
@@ -126,7 +146,7 @@ CORS allows:
 }
 ```
 
-The server recomputes the price from `data/prices.json` and `data/villa-rates.js` bundled into the Worker. A total sent by the browser is ignored. The rule matches the booking page: whole 7-night blocks at the weekly rate of that block's check-in date, leftover nights at each night's day rate. Pool heat is £126 a week from October through April, pro-rata by night (`round(nights × weekly / 7)`, which is £18 a night at the published amount) and only when every night is in season. Cot and high chair are once per stay. Final cleaning is included. The refundable deposit is stored separately and is not part of `totalToPay`. A year with no published rate is accepted with `totalToPay: null`; the emails say the owner will confirm the price.
+The server recomputes the price from `data/prices.json` and `data/villa-rates.js` bundled into the Worker. `worker/src/load-villa-rates.js` loads that same file, which stays a plain script for the booking page and the about page. `data/package.json` sets `"type": "commonjs"` so a repo-level `"type": "module"` does not make the bundler treat that script as an ES module. A total sent by the browser is ignored. The rule matches the booking page: whole 7-night blocks at the weekly rate of that block's check-in date, leftover nights at each night's day rate. Pool heat is £126 a week from October through April, pro-rata by night (`round(nights × weekly / 7)`, which is £18 a night at the published amount) and only when every night is in season. Cot and high chair are once per stay. Final cleaning is included. The refundable deposit is stored separately and is not part of `totalToPay`. A year with no published rate is accepted with `totalToPay: null`; the emails say the owner will confirm the price.
 
 Stays are 1 to 112 nights. Check-in cannot be in the past in `America/New_York`, and cannot be more than 24 months ahead. Guests are 1 to 6.
 
@@ -150,7 +170,7 @@ The page is sent with `Cache-Control: no-store` and `Referrer-Policy: no-referre
 
 ## Emails
 
-The module is `worker/src/email.js`. It POSTs to a Resend-style endpoint. With no API key, or a placeholder sender or recipient, it logs `{ "event": "email_dry_run", "to", "subject", "text" }` and does not call the network.
+The module is `worker/src/email.js`. It POSTs to a Resend-style endpoint. `from` is always `EMAIL_FROM`. Guest messages include `reply_to` from `REPLY_TO`, or from `OWNER_EMAIL` when `REPLY_TO` is unset. A placeholder Reply-To (`example.com`, `example.net`, or empty) is left off the request. With no API key, or a placeholder sender or recipient, it logs `{ "event": "email_dry_run", "to", "subject", "text" }` and does not call the network. Owner notifications are addressed only to `OWNER_EMAIL`.
 
 Sent when a request is saved:
 
@@ -196,7 +216,7 @@ The published block is inserted by the migration. Editing `data/availability.jso
 TZ=UTC node --test tests/price-stay.test.js tests/booking-page.test.js worker/test/backend.test.js
 ```
 
-The API tests use Node's built-in SQLite and the same SQL file. They cover pricing parity with the page, same-day turnover, the blocked range, expiry at 72 hours, reminder selection, the invoice placeholders, rate limiting, and CORS. They also cover approval tokens (valid, expired, tampered, and signed with the wrong secret), a `GET` that does not decide, a `POST` of the email URL that does not decide, idempotent approve and reject, the overlap check when the nights have been taken, decline and invoice email wording, and that the reminder cron ignores pending and rejected bookings. Node may print an experimental SQLite warning.
+`tests/package.json` sets `"type": "commonjs"` so those files stay CommonJS scripts if a repo-level `package.json` sets `"type": "module"`. The API tests use Node's built-in SQLite and the same SQL file. They cover pricing parity with the page, same-day turnover, the blocked range, expiry at 72 hours, reminder selection, the invoice placeholders, rate limiting, and CORS. They also cover approval tokens (valid, expired, tampered, and signed with the wrong secret), a `GET` that does not decide, a `POST` of the email URL that does not decide, idempotent approve and reject, the overlap check when the nights have been taken, decline and invoice email wording, and that the reminder cron ignores pending and rejected bookings. Node may print an experimental SQLite warning.
 
 ## Deployed
 

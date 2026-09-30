@@ -3,6 +3,9 @@
 interface Env {
   EMAIL_API_KEY?: string;
   EMAIL_API_URL?: string;
+  EMAIL_FROM?: string;
+  OWNER_EMAIL?: string;
+  REPLY_TO?: string;
   BANK_ACCOUNT_NAME?: string;
   BANK_SORT_CODE?: string;
   BANK_ACCOUNT_NUMBER?: string;
