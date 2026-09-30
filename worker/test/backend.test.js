@@ -467,6 +467,15 @@ test('posting is rate limited and dry-run email does not call the provider', asy
   assert.equal(dry.dryRun, true);
   assert.equal(called, false);
   assert.equal(emailConfigured(testEnv(db)), false);
+  const missingFrom = await sendEmail({
+    EMAIL_API_KEY: 'test-key',
+    EMAIL_FROM: '',
+  }, { to: 'ada@guest.test', subject: 'Hi', text: 'Body', html: '<p>Body</p>' }, () => {
+    called = true;
+    throw new Error('missing EMAIL_FROM must not send');
+  });
+  assert.equal(missingFrom.dryRun, true);
+  assert.equal(called, false);
 
   const live = await sendEmail({
     EMAIL_API_KEY: 'test-key',
@@ -805,6 +814,19 @@ test('bank lines come from env, owner mail is one address, and reminders skip pe
   assert.equal(ownerSends[0].to, stored.guest_email);
   assert.equal(ownerAddress({ OWNER_EMAIL: 'one@example.com, two@example.com' }), null);
   assert.equal(ownerAddress({ OWNER_EMAIL: 'owner@example.com' }), 'owner@example.com');
+  assert.equal(ownerAddress({ OWNER_EMAIL: '' }), null);
+
+  const unsetOwner = [];
+  const unset = await sendRequestEmails({
+    ...testEnv(db),
+    OWNER_EMAIL: '',
+  }, stored, async (_env, message) => {
+    unsetOwner.push(message);
+    return { dryRun: false, ok: true };
+  }, 'https://florida-rotonda-villa-api.example.workers.dev');
+  assert.equal(unsetOwner.length, 1);
+  assert.equal(unsetOwner[0].to, stored.guest_email);
+  assert.equal(unset.owner.dryRun, true);
 
   const pendingDb = openDb();
   const pending = await postBooking(pendingDb, payload({

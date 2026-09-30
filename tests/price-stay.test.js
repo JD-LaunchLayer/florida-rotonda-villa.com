@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
+const vm = require('node:vm');
 const VillaRates = require('../data/villa-rates.js');
 
 const prices = JSON.parse(fs.readFileSync(path.join(__dirname, '../data/prices.json'), 'utf8'));
@@ -18,6 +19,17 @@ function stay(checkIn, checkOut, source) {
 function rental(checkIn, checkOut, source) {
   return stay(checkIn, checkOut, source).rentalTotal;
 }
+
+test('villa-rates.js stays a plain script and still exports the quote helpers', () => {
+  const sourcePath = path.join(__dirname, '../data/villa-rates.js');
+  const source = fs.readFileSync(sourcePath, 'utf8');
+  assert.equal(/\bexport\s/.test(source), false);
+  assert.equal(typeof VillaRates.buildQuote, 'function');
+  const window = {};
+  vm.runInNewContext(source, { window, globalThis: window });
+  assert.equal(typeof window.VillaRates.buildQuote, 'function');
+  assert.equal(typeof window.VillaRates.parseISODate, 'function');
+});
 
 test('band edges use the published month-day boundaries', () => {
   function bandId(iso) {

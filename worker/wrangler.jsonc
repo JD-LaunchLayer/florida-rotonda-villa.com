@@ -22,10 +22,10 @@
   "triggers": {
     "crons": ["0 * * * *"]
   },
-  // APPROVAL_SECRET is not a var. Set it with: npx wrangler secret put APPROVAL_SECRET
+  // Secrets, not vars (a var blocks `wrangler secret put` with error 10053):
+  // APPROVAL_SECRET, EMAIL_API_KEY, EMAIL_FROM, OWNER_EMAIL, and the bank secrets.
+  // Unset EMAIL_FROM or OWNER_EMAIL dry-runs email. Do not put addresses here.
   "vars": {
-    "OWNER_EMAIL": "owner@example.com",
-    "EMAIL_FROM": "Florida Rotonda Villa <bookings@example.com>",
     "NETLIFY_SITE_SLUG": "floridarotondavillacom",
     "ALLOWED_ORIGINS": "https://florida-rotonda-villa.com,https://www.florida-rotonda-villa.com,https://florida-rotonda-villa.co.uk,https://www.florida-rotonda-villa.co.uk",
     "PROPERTY_TIMEZONE": "America/New_York",

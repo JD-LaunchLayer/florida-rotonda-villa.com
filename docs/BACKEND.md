@@ -68,14 +68,14 @@ npx wrangler d1 migrations apply florida-rotonda-villa-db --local
 
 ## Secrets and variables
 
-Nothing secret belongs in the repo. `worker/wrangler.jsonc` holds the database id and non-secret vars. Bank details and the email API key stay in Worker secrets.
+Nothing secret belongs in the repo. `worker/wrangler.jsonc` holds the database id and non-secret vars. Bank details, the email API key, `EMAIL_FROM`, and `OWNER_EMAIL` are Worker secrets. They are not vars: a plain var with the same name blocks `wrangler secret put` with error 10053, "Binding name already in use".
 
 | Name | How to set it | Placeholder behaviour |
 | --- | --- | --- |
 | `APPROVAL_SECRET` | `npx wrangler secret put APPROVAL_SECRET` | If this is missing, the booking is still saved and the guest still gets the request email. The owner email says the approval links are unavailable. Generate a long random value, for example with `openssl rand -base64 32`, and paste it into the secret prompt. Do not commit it. Use a new value for production; the test suite has its own fake secret. Changing this secret invalidates links that were already sent. Those holds still expire after 72 hours. |
 | `EMAIL_API_KEY` | `npx wrangler secret put EMAIL_API_KEY` | If this is missing, every email is logged as `email_dry_run` and nothing is sent. |
-| `EMAIL_FROM` | `npx wrangler secret put EMAIL_FROM` | The committed var is `Florida Rotonda Villa <bookings@example.com>`. A sender containing `example.com` does not send. Use a verified address such as `Florida Rotonda Villa <bookings@your-domain>`. |
-| `OWNER_EMAIL` | `npx wrangler secret put OWNER_EMAIL` | The committed var is `owner@example.com`. Mail to that address is logged, not sent. A secret overrides the var. |
+| `EMAIL_FROM` | `npx wrangler secret put EMAIL_FROM` | If this is missing, every email is logged as `email_dry_run` and nothing is sent. A sender containing `example.com` also does not send. Use a verified address such as `Florida Rotonda Villa <bookings@your-domain>`. |
+| `OWNER_EMAIL` | `npx wrangler secret put OWNER_EMAIL` | One address only. If this is missing, owner mail is logged as `email_dry_run` and nothing is sent to the owner. Guest mail still follows the `EMAIL_API_KEY` / `EMAIL_FROM` rules. A value with more than one address is not used. |
 | `BANK_ACCOUNT_NAME` | `npx wrangler secret put BANK_ACCOUNT_NAME` | Empty becomes `[PLACEHOLDER]` in the email body. |
 | `BANK_SORT_CODE` | `npx wrangler secret put BANK_SORT_CODE` | Empty becomes `[PLACEHOLDER]`. |
 | `BANK_ACCOUNT_NUMBER` | `npx wrangler secret put BANK_ACCOUNT_NUMBER` | Empty becomes `[PLACEHOLDER]`. |
@@ -126,7 +126,7 @@ CORS allows:
 }
 ```
 
-The server recomputes the price from `data/prices.json` and `data/villa-rates.js` bundled into the Worker. A total sent by the browser is ignored. The rule matches the booking page: whole 7-night blocks at the weekly rate of that block's check-in date, leftover nights at each night's day rate. Pool heat is £126 a week from October through April, pro-rata by night (`round(nights × weekly / 7)`, which is £18 a night at the published amount) and only when every night is in season. Cot and high chair are once per stay. Final cleaning is included. The refundable deposit is stored separately and is not part of `totalToPay`. A year with no published rate is accepted with `totalToPay: null`; the emails say the owner will confirm the price.
+The server recomputes the price from `data/prices.json` and `data/villa-rates.js` bundled into the Worker. `worker/src/load-villa-rates.js` loads that same file, which stays a plain script for the booking page and the about page. `data/package.json` sets `"type": "commonjs"` so a repo-level `"type": "module"` does not make the bundler treat that script as an ES module. A total sent by the browser is ignored. The rule matches the booking page: whole 7-night blocks at the weekly rate of that block's check-in date, leftover nights at each night's day rate. Pool heat is £126 a week from October through April, pro-rata by night (`round(nights × weekly / 7)`, which is £18 a night at the published amount) and only when every night is in season. Cot and high chair are once per stay. Final cleaning is included. The refundable deposit is stored separately and is not part of `totalToPay`. A year with no published rate is accepted with `totalToPay: null`; the emails say the owner will confirm the price.
 
 Stays are 1 to 112 nights. Check-in cannot be in the past in `America/New_York`, and cannot be more than 24 months ahead. Guests are 1 to 6.
 
@@ -196,7 +196,7 @@ The published block is inserted by the migration. Editing `data/availability.jso
 TZ=UTC node --test tests/price-stay.test.js tests/booking-page.test.js worker/test/backend.test.js
 ```
 
-The API tests use Node's built-in SQLite and the same SQL file. They cover pricing parity with the page, same-day turnover, the blocked range, expiry at 72 hours, reminder selection, the invoice placeholders, rate limiting, and CORS. They also cover approval tokens (valid, expired, tampered, and signed with the wrong secret), a `GET` that does not decide, a `POST` of the email URL that does not decide, idempotent approve and reject, the overlap check when the nights have been taken, decline and invoice email wording, and that the reminder cron ignores pending and rejected bookings. Node may print an experimental SQLite warning.
+`tests/package.json` sets `"type": "commonjs"` so those files stay CommonJS scripts if a repo-level `package.json` sets `"type": "module"`. The API tests use Node's built-in SQLite and the same SQL file. They cover pricing parity with the page, same-day turnover, the blocked range, expiry at 72 hours, reminder selection, the invoice placeholders, rate limiting, and CORS. They also cover approval tokens (valid, expired, tampered, and signed with the wrong secret), a `GET` that does not decide, a `POST` of the email URL that does not decide, idempotent approve and reject, the overlap check when the nights have been taken, decline and invoice email wording, and that the reminder cron ignores pending and rejected bookings. Node may print an experimental SQLite warning.
 
 ## Deployed
 
