@@ -27,13 +27,24 @@ function placeholder(value) {
   return text || '[PLACEHOLDER]';
 }
 
+function singleAddress(value) {
+  const text = String(value || '').trim();
+  if (!text || text.includes(',') || text.includes(';')) return null;
+  const emails = text.match(/[^\s<>]+@[^\s<>]+/g) || [];
+  if (emails.length !== 1) return null;
+  return text;
+}
+
 // Owner mail goes to this one address. A list is refused so a secret cannot fan out.
 export function ownerAddress(env) {
-  const value = String(env && env.OWNER_EMAIL || '').trim();
-  if (!value || value.includes(',') || value.includes(';')) return null;
-  const emails = value.match(/[^\s<>]+@[^\s<>]+/g) || [];
-  if (emails.length !== 1) return null;
-  return value;
+  return singleAddress(env && env.OWNER_EMAIL);
+}
+
+// Guest Reply-To. REPLY_TO wins; otherwise the single OWNER_EMAIL. Neither is hardcoded.
+export function replyToAddress(env) {
+  const explicit = String(env && env.REPLY_TO || '').trim();
+  if (explicit) return singleAddress(explicit);
+  return ownerAddress(env);
 }
 
 // Resend-style HTTP API. With no key, or a placeholder sender, this logs and does not send.
