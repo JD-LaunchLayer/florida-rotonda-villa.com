@@ -2,7 +2,7 @@
 
 Published weekly and daily rates live in one file: [`data/prices.json`](../data/prices.json).
 
-The About page and the booking demo both read that file. Change a number there and both pages pick it up. Do not type prices into the HTML.
+The About page and the booking page both read that file. Change a number there and both pages pick it up. Do not type prices into the HTML.
 
 ## What you can edit
 
@@ -30,4 +30,4 @@ A night uses the prices for that night's calendar year. 4 January and 31 Decembe
 ## Pages
 
 - About (`/about.html`) draws the 2024, 2025, and 2026 tables and the extras sentences from this file when JavaScript runs. The same three tables stay in the page as the no-JavaScript fallback. A normal browser only needs this file edited.
-- The booking demo (`/booking-demo.html`) uses the per-day rate for each night. It is a rough quote. The final price is confirmed by the owner. Years that are not listed here are not given a guessed price.
+- The booking page (`/booking`) prices a stay with the rule in [BOOKING.md](BOOKING.md). Years that are not listed here are not given a guessed price.
