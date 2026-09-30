@@ -108,17 +108,42 @@
 
 		.booking-layout {
 			display: grid;
-			grid-template-columns: 1.15fr 0.85fr;
+			grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
 			gap: 28px;
 			align-items: start;
+		}
+
+		.booking-panel {
+			grid-column: 1;
+			grid-row: 1;
+		}
+
+		.quote-card {
+			grid-column: 2;
+			grid-row: 1 / span 2;
+		}
+
+		.request-panel {
+			grid-column: 1;
+			grid-row: 2;
+			margin-top: 0;
 		}
 
 		.booking-panel,
 		.request-panel,
 		.quote-card {
+			align-self: start;
+			height: auto;
 			background: var(--paper);
 			border: 1px solid var(--line);
 			padding: 22px;
+		}
+
+		/* The theme lays this section out as a table, which blocks position: sticky. */
+		body.wsite-page-booking #main-wrap > .wsite-section-wrap,
+		body.wsite-page-booking #main-wrap .wsite-section.wsite-body-section {
+			display: block;
+			width: 100%;
 		}
 
 		.quote-card {
@@ -410,7 +435,7 @@
 		}
 		.deposit-box strong { font-size: 28px; }
 
-		.request-panel { margin-top: 28px; }
+		.request-panel { margin-top: 0; }
 
 		.form-grid {
 			display: grid;
@@ -445,12 +470,27 @@
 			.intro-grid,
 			.booking-layout,
 			.form-grid { grid-template-columns: 1fr; }
-			.quote-card { position: static; }
+			.booking-panel,
+			.quote-card,
+			.request-panel {
+				grid-column: 1;
+				grid-row: auto;
+			}
+			.quote-card {
+				position: static;
+				max-height: none;
+				overflow: visible;
+			}
 			.quote-total strong, .deposit-box strong { font-size: 28px; }
 		}
 
-		@media screen and (min-width: 900px) {
-			.quote-card { position: sticky; top: 12px; }
+		@media screen and (min-width: 861px) {
+			.quote-card {
+				position: sticky;
+				top: 16px;
+				max-height: calc(100vh - 32px);
+				overflow-y: auto;
+			}
 		}
 	</style>
 
@@ -683,7 +723,6 @@
 											<p id="balance-note" class="policy-note"></p>
 											<p class="policy-note">No smoking is permitted within the villa.</p>
 										</aside>
-									</div>
 
 									<section class="request-panel" aria-labelledby="request-heading">
 										<h2 id="request-heading">Send a booking request</h2>
@@ -733,6 +772,7 @@
 										</div>
 										<p class="request-note">This sends a booking request. It does not confirm a reservation. The owner confirms the booking, and the dates are held while the request is pending.</p>
 									</section>
+									</div>
 								</form>
 								<noscript>
 									<p>This page needs JavaScript to show which dates are free and to calculate the price from the published rates.</p>
