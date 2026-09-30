@@ -1,0 +1,12 @@
+# Copy to worker/.dev.vars for local `wrangler dev`. Never commit .dev.vars.
+# Production does not allow localhost until you set this for local preview only.
+ALLOW_LOCALHOST=true
+
+# Leave these unset until the sender domain is verified.
+# EMAIL_API_KEY=
+# EMAIL_FROM=Florida Rotonda Villa <bookings@your-verified-domain>
+# OWNER_EMAIL=
+# BANK_ACCOUNT_NAME=
+# BANK_SORT_CODE=
+# BANK_ACCOUNT_NUMBER=
+# EMAIL_API_URL=https://api.resend.com/emails

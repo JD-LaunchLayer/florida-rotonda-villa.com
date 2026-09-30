@@ -471,6 +471,20 @@
 			border-left: 4px solid var(--gold);
 			line-height: 1.5;
 		}
+		.availability-note { margin-top: -8px; }
+		.request-status {
+			margin: 14px 0 0;
+			padding: 12px 14px;
+			line-height: 1.5;
+		}
+		.request-status.ok {
+			background: #e7f2e7;
+			border-left: 4px solid #2f6b3a;
+		}
+		.request-status.error {
+			background: var(--booked);
+			border-left: 4px solid var(--booked-text);
+		}
 
 		@media screen and (max-width: 860px) {
 			.intro-grid,
@@ -617,13 +631,8 @@
 									</figure>
 								</div>
 
-								<form action="https://api.web3forms.com/submit" method="POST" id="booking-form">
-									<!-- TODO: Next PR — post this booking request to our own API instead of Web3Forms. -->
-									<input type="hidden" name="access_key" value="82029927-87bd-4a56-9580-662e28e62af6">
-									<input type="hidden" name="subject" value="Booking request - Florida Rotonda Villa">
-									<input type="hidden" name="from_name" value="Florida Rotonda Villa">
-									<input type="hidden" name="redirect" value="https://web3forms.com/success">
-									<input type="checkbox" name="botcheck" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;">
+								<form method="post" action="#booking-form" id="booking-form" onsubmit="return false;">
+									<input type="checkbox" id="botcheck" name="botcheck" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;">
 
 									<input type="hidden" name="check_in" id="field-checkin">
 									<input type="hidden" name="check_out" id="field-checkout">
@@ -640,6 +649,7 @@
 										<section class="booking-panel" aria-labelledby="availability-heading">
 											<h2 id="availability-heading">Check availability</h2>
 											<p class="panel-lead">Select a check-in date, then a check-out date. Booked nights are marked. You can check out on a day another guest checks in.</p>
+											<p id="availability-note" class="availability-note policy-note" hidden></p>
 
 											<div class="cal-nav">
 												<button type="button" id="cal-prev" aria-label="Previous month">Prev</button>
@@ -779,12 +789,13 @@
 											</div>
 										</div>
 
+										<p id="request-status" class="request-status" role="status" hidden></p>
 										<div class="form-submit">
-											<button type="submit" class="wsite-button wsite-button-highlight" style="border: 0; background: transparent; cursor: pointer; padding: 0;">
+											<button type="button" id="send-request" class="wsite-button wsite-button-highlight" style="border: 0; background: transparent; cursor: pointer; padding: 0;">
 												<span class="wsite-button-inner">Send booking request</span>
 											</button>
 										</div>
-										<p class="request-note">This sends a booking request. It does not confirm a reservation. The owner confirms the booking, and the dates are held while the request is pending.</p>
+										<p class="request-note">This sends a booking request. It does not confirm a reservation. The owner confirms the booking, and the dates are held for 72 hours while the request is pending.</p>
 									</section>
 									</div>
 								</form>
@@ -870,6 +881,11 @@
 		var balanceNote = document.getElementById('balance-note');
 		var formStay = document.getElementById('form-stay');
 		var formBreakdown = document.getElementById('form-breakdown');
+		var requestStatus = document.getElementById('request-status');
+		var availabilityNote = document.getElementById('availability-note');
+		var submitButton = document.getElementById('send-request');
+		var submitLabel = submitButton.querySelector('.wsite-button-inner');
+		var apiBase = '';
 
 		function money(amount) {
 			return window.VillaRates ? VillaRates.formatGBP(amount) : '';
@@ -1263,26 +1279,159 @@
 		cotInput.addEventListener('change', updateSummary);
 		chairInput.addEventListener('change', updateSummary);
 
-		document.getElementById('booking-form').addEventListener('submit', function (event) {
-			// TODO: Next PR — post this booking request to our own API instead of Web3Forms.
+		function setRequestStatus(kind, text) {
+			if (!text) {
+				requestStatus.hidden = true;
+				requestStatus.textContent = '';
+				return;
+			}
+			requestStatus.hidden = false;
+			requestStatus.className = 'request-status ' + kind;
+			requestStatus.textContent = text;
+		}
+
+		function trimSlash(value) {
+			var text = String(value || '');
+			while (text.length && text.charAt(text.length - 1) === '/') text = text.slice(0, -1);
+			return text;
+		}
+
+		function restoreSubmit() {
+			requestBusy = false;
+			submitButton.disabled = false;
+			submitLabel.textContent = 'Send booking request';
+		}
+
+		function loadAvailability() {
+			var refreshing = availabilityStatus === 'ready';
+			if (!refreshing) {
+				availabilityStatus = 'loading';
+				renderCalendar();
+			}
+			fetch('/data/booking-api.json', { cache: 'no-cache' }).then(function (res) {
+				if (!res.ok) throw new Error('config');
+				return res.json();
+			}).then(function (cfg) {
+				apiBase = cfg && cfg.baseUrl ? trimSlash(cfg.baseUrl) : '';
+				if (!apiBase) throw new Error('no-api');
+				return fetch(apiBase + '/api/availability', { cache: 'no-cache' });
+			}).then(function (res) {
+				if (!res.ok) throw new Error('api');
+				return res.json();
+			}).then(function (data) {
+				ranges = data && data.ranges ? data.ranges : [];
+				availabilityStatus = 'ready';
+				availabilityNote.hidden = true;
+				availabilityNote.textContent = '';
+				renderCalendar();
+			}).catch(function () {
+				fetch('/data/availability.json', { cache: 'no-cache' }).then(function (res) {
+					if (!res.ok) throw new Error('static');
+					return res.json();
+				}).then(function (data) {
+					ranges = data && data.ranges ? data.ranges : [];
+					availabilityStatus = 'ready';
+					availabilityNote.hidden = false;
+					availabilityNote.textContent = apiBase
+						? 'Live availability could not be loaded. Showing the published booked dates only. Your request is still checked when you send it.'
+						: 'Live availability is not connected yet. Showing the published booked dates only.';
+					renderCalendar();
+				}).catch(function () {
+					ranges = [];
+					availabilityStatus = 'error';
+					setStatus('Booked dates could not be loaded. Please try again before sending a request.');
+					renderCalendar();
+				});
+			});
+		}
+
+		var requestForm = document.getElementById('booking-form');
+		var requestBusy = false;
+		requestForm.submit = function () {};
+		requestForm.addEventListener('submit', function (event) {
+			event.preventDefault();
+			sendRequest();
+		}, true);
+		submitButton.addEventListener('click', sendRequest);
+
+		function sendRequest() {
+			if (requestBusy) return;
+			setRequestStatus('', '');
 			if (availabilityStatus !== 'ready' || !hasStay()) {
-				event.preventDefault();
 				setStatus('Select a check-in date and a check-out date before sending your request.');
 				calGrid.focus();
 				return;
 			}
 			if (VillaRates.stayHitsBookedNight(ranges, selectionStart, selectionEnd)) {
-				event.preventDefault();
 				setStatus('Those dates include a booked night. Choose a different stay.');
 				return;
 			}
 			var guests = Number(guestCount.value);
 			if (guests < 1 || guests > 6) {
-				event.preventDefault();
 				setStatus('The villa takes 1 to 6 guests.');
 				guestCount.focus();
+				return;
 			}
-		});
+			if (!apiBase) {
+				setRequestStatus('error', 'The booking service is not connected on this site yet. Please use the contact page, or try again later.');
+				return;
+			}
+			requestBusy = true;
+			submitButton.disabled = true;
+			submitLabel.textContent = 'Sending request';
+			fetch(apiBase + '/api/bookings', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					arrival: document.getElementById('field-checkin').value,
+					departure: document.getElementById('field-checkout').value,
+					guests: guests,
+					extras: {
+						poolHeat: poolInput.checked,
+						cot: cotInput.checked,
+						highChair: chairInput.checked
+					},
+					firstName: document.getElementById('guest-first').value,
+					lastName: document.getElementById('guest-last').value,
+					email: document.getElementById('guest-email').value,
+					phone: document.getElementById('guest-phone').value,
+					message: document.getElementById('guest-message').value,
+					termsAccepted: true,
+					botcheck: document.getElementById('botcheck').checked ? 'yes' : ''
+				})
+			}).then(function (res) {
+				return res.json().then(function (parsed) {
+					return { status: res.status, body: parsed };
+				}).catch(function () {
+					return { status: res.status, body: null };
+				});
+			}).then(function (result) {
+				var body = result.body || {};
+				if (result.status === 201 || (result.status === 200 && body.ok)) {
+					var note = 'Your request is in.';
+					if (body.id) {
+						note += ' Reference ' + body.id + '. The dates are held for 72 hours while the owner confirms.';
+						if (body.email === 'failed') note += ' We could not send the email. Please contact the owner and quote that reference.';
+					}
+					setRequestStatus('ok', note);
+					submitButton.disabled = true;
+					submitLabel.textContent = 'Request sent';
+					loadAvailability();
+					return;
+				}
+				restoreSubmit();
+				if (result.status === 409) {
+					setStatus('Those dates were just taken. Please choose another stay.');
+					setRequestStatus('error', body.message || 'Those dates were just taken. Please choose another stay.');
+					loadAvailability();
+					return;
+				}
+				setRequestStatus('error', body.message || 'We could not send your request. Please try again, or use the contact page.');
+			}).catch(function () {
+				restoreSubmit();
+				setRequestStatus('error', 'We could not send your request. Please try again, or use the contact page.');
+			});
+		}
 
 		updateSummary();
 		renderCalendar();
@@ -1298,19 +1447,7 @@
 				updateSummary();
 			});
 
-			fetch('/data/availability.json', { cache: 'no-cache' }).then(function (res) {
-				if (!res.ok) throw new Error('availability');
-				return res.json();
-			}).then(function (data) {
-				ranges = data && data.ranges ? data.ranges : [];
-				availabilityStatus = 'ready';
-				renderCalendar();
-			}).catch(function () {
-				ranges = [];
-				availabilityStatus = 'error';
-				setStatus('Booked dates could not be loaded. Please try again before sending a request.');
-				renderCalendar();
-			});
+			loadAvailability();
 		} else {
 			pricesStatus = 'error';
 			availabilityStatus = 'error';

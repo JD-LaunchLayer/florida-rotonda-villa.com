@@ -1,0 +1,33 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "florida-rotonda-villa-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-30",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "workers_dev": true,
+  // Remote database florida-rotonda-villa-db. Migration 0001 is already applied.
+  // Keep a single binding named DB. Wrangler may insert florida_rotonda_villa_db; remove it.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "florida-rotonda-villa-db",
+      "database_id": "a760105a-f7d8-48d5-8f21-4a5290fef7b8",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "triggers": {
+    "crons": ["0 * * * *"]
+  },
+  "vars": {
+    "OWNER_EMAIL": "owner@example.com",
+    "EMAIL_FROM": "Florida Rotonda Villa <bookings@example.com>",
+    "NETLIFY_SITE_SLUG": "floridarotondavillacom",
+    "ALLOWED_ORIGINS": "https://florida-rotonda-villa.com,https://www.florida-rotonda-villa.com,https://florida-rotonda-villa.co.uk,https://www.florida-rotonda-villa.co.uk",
+    "PROPERTY_TIMEZONE": "America/New_York",
+    "REMINDER_TIMEZONE": "Europe/London"
+  }
+}
