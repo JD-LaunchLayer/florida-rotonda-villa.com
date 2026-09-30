@@ -149,26 +149,78 @@ export async function listAvailabilityRanges(db, now) {
   return ranges;
 }
 
-// Internal only. The public Worker does not expose an approve route.
+function changed(result) {
+  return Number(result && result.meta && result.meta.changes) === 1;
+}
+
+function classifyDecision(existing, nowIso) {
+  if (!existing) return { ok: false, error: 'not_found' };
+  if (existing.status === 'expired' || (existing.status === 'pending' && existing.expires_at <= nowIso)) {
+    return { ok: false, error: 'expired', booking: existing };
+  }
+  if (existing.status === 'confirmed') return { ok: false, error: 'already_confirmed', booking: existing };
+  if (existing.status === 'rejected') return { ok: false, error: 'already_rejected', booking: existing };
+  if (existing.status === 'cancelled') return { ok: false, error: 'already_cancelled', booking: existing };
+  return { ok: false, error: 'not_pending', status: existing.status, booking: existing };
+}
+
+// The night-count check runs in the same UPDATE as the status change.
+// A pending hold whose nights were taken by another stay is left pending.
 export async function confirmBooking(db, id, now) {
   await expireDueBookings(db, now);
+  const existing = await getBooking(db, id);
+  if (!existing) return { ok: false, error: 'not_found' };
   const nowIso = now.toISOString();
+  const expectedNights = nightsBetween(existing.arrival, existing.departure).length;
   const result = await db.prepare(
     `UPDATE bookings
      SET status = 'confirmed', confirmed_at = ?
-     WHERE id = ? AND status = 'pending' AND expires_at > ?`
-  ).bind(nowIso, id, nowIso).run();
-  if (result.meta && result.meta.changes === 1) {
-    return { ok: true, booking: await getBooking(db, id) };
+     WHERE id = ?
+       AND status = 'pending'
+       AND expires_at > ?
+       AND (
+         SELECT COUNT(*) FROM occupied_nights
+         WHERE booking_id = bookings.id
+           AND night >= bookings.arrival
+           AND night < bookings.departure
+       ) = ?
+       AND NOT EXISTS (
+         SELECT 1 FROM occupied_nights
+         WHERE night >= bookings.arrival
+           AND night < bookings.departure
+           AND IFNULL(booking_id, '') != bookings.id
+       )`
+  ).bind(nowIso, id, nowIso, expectedNights).run();
+  if (changed(result)) return { ok: true, booking: await getBooking(db, id) };
+  const again = await getBooking(db, id);
+  if (again && again.status === 'pending' && again.expires_at > nowIso) {
+    return { ok: false, error: 'overlap', booking: again };
   }
-  const existing = await getBooking(db, id);
-  if (!existing) return { ok: false, error: 'not_found' };
-  if (existing.status === 'expired' || (existing.status === 'pending' && existing.expires_at <= nowIso)) {
-    return { ok: false, error: 'expired' };
-  }
-  return { ok: false, error: 'not_pending', status: existing.status };
+  return classifyDecision(again, nowIso);
 }
 
+export async function rejectBooking(db, id, now) {
+  await expireDueBookings(db, now);
+  const nowIso = now.toISOString();
+  const results = await db.batch([
+    db.prepare(
+      `UPDATE bookings
+       SET status = 'rejected'
+       WHERE id = ? AND status = 'pending' AND expires_at > ?`
+    ).bind(id, nowIso),
+    db.prepare(
+      `DELETE FROM occupied_nights
+       WHERE booking_id = ?
+         AND EXISTS (
+           SELECT 1 FROM bookings WHERE id = ? AND status = 'rejected'
+         )`
+    ).bind(id, id),
+  ]);
+  if (changed(results && results[0])) return { ok: true, booking: await getBooking(db, id) };
+  return classifyDecision(await getBooking(db, id), nowIso);
+}
+
+// Seven-week balance reminders are confirmed stays only. Pending and rejected are ignored.
 export async function selectReminderBookings(db, today) {
   const arrival = addDaysISO(today, REMINDER_DAYS_BEFORE_ARRIVAL);
   const rows = await db.prepare(

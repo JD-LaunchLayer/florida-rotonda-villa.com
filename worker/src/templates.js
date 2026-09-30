@@ -117,19 +117,67 @@ export function requestReceivedEmail(booking, env) {
   return message(booking.guest_email, `Booking request received ${booking.id}`, lines, env.OWNER_EMAIL);
 }
 
-export function ownerRequestEmail(booking, env) {
+export function ownerRequestEmail(booking, env, links) {
   const lines = [
-    'New booking request. The dates are held as pending. Approve and reject are not on the public site yet.',
+    'New booking request. The dates are held as pending.',
     `Hold ends: ${formatWhen(booking.expires_at, 'Europe/London')}`,
     '',
+  ];
+  if (links && links.approve && links.reject) {
+    lines.push(
+      'Open a link to review the request. Opening it does not approve or reject the stay. Use the button on the page.',
+      'These links are only for you. Anyone who opens them can decide this request.',
+      `Approve: ${links.approve}`,
+      `Reject: ${links.reject}`,
+      '',
+    );
+  } else {
+    lines.push('The approval links are not included because APPROVAL_SECRET is not set on the Worker.', '');
+  }
+  lines.push(
     ...stayLines(booking),
     '',
     `Message: ${booking.message || 'none'}`,
     '',
     'Price breakdown',
     ...breakdownLines(booking),
-  ];
+  );
   return message(env.OWNER_EMAIL, `New booking request ${booking.id}`, lines, booking.guest_email);
+}
+
+export function declineEmail(booking, env) {
+  const lines = [
+    `Hello ${booking.guest_first_name},`,
+    '',
+    'Thank you for asking to stay at the Florida Rotonda villa. We are sorry we cannot confirm this request.',
+    '',
+    `Booking reference: ${booking.id}`,
+    `Check-in: ${formatLongDate(booking.arrival)}`,
+    `Check-out: ${formatLongDate(booking.departure)}`,
+    '',
+    'The dates are no longer held. You are welcome to request another stay.',
+    '',
+    'Florida Rotonda Villa',
+  ];
+  return message(booking.guest_email, `Booking request declined ${booking.id}`, lines, env.OWNER_EMAIL);
+}
+
+export function ownerDecisionEmail(booking, env, action) {
+  const approved = action === 'approve';
+  const verb = approved ? 'approved' : 'declined';
+  const lines = [
+    `You ${verb} booking ${booking.id}.`,
+    '',
+    `${booking.guest_first_name} ${booking.guest_last_name}`,
+    booking.guest_email,
+    `Check-in: ${formatLongDate(booking.arrival)}`,
+    `Check-out: ${formatLongDate(booking.departure)}`,
+    '',
+    approved
+      ? 'A confirmation with the payment details was prepared for the guest.'
+      : 'A decline was prepared for the guest, and the dates are free for another request.',
+  ];
+  return message(env.OWNER_EMAIL, `You ${verb} booking ${booking.id}`, lines, booking.guest_email);
 }
 
 export function confirmationEmail(booking, env) {
@@ -152,6 +200,7 @@ export function confirmationEmail(booking, env) {
   return message(booking.guest_email, `Booking confirmed ${booking.id}`, lines, env.OWNER_EMAIL);
 }
 
+// The approval flow sends ownerDecisionEmail. This copy remains for comparison with the guest invoice.
 export function ownerConfirmationCopy(booking, env) {
   const guest = confirmationEmail(booking, env);
   const text = `Copy of the confirmation sent to ${booking.guest_first_name} ${booking.guest_last_name} (${booking.guest_email}).\n\n${guest.text}`;

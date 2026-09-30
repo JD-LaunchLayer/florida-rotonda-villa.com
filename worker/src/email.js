@@ -27,6 +27,15 @@ function placeholder(value) {
   return text || '[PLACEHOLDER]';
 }
 
+// Owner mail goes to this one address. A list is refused so a secret cannot fan out.
+export function ownerAddress(env) {
+  const value = String(env && env.OWNER_EMAIL || '').trim();
+  if (!value || value.includes(',') || value.includes(';')) return null;
+  const emails = value.match(/[^\s<>]+@[^\s<>]+/g) || [];
+  if (emails.length !== 1) return null;
+  return value;
+}
+
 // Resend-style HTTP API. With no key, or a placeholder sender, this logs and does not send.
 export async function sendEmail(env, message, fetchImpl = fetch) {
   const to = Array.isArray(message.to) ? message.to : [message.to];

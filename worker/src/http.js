@@ -1,4 +1,5 @@
 import { corsHeaders } from './cors.js';
+import { handleDecision } from './decide.js';
 import { consumeRateLimit, createPendingBooking, listAvailabilityRanges } from './db.js';
 import { sendEmail } from './email.js';
 import { deliveryOk, sendRequestEmails } from './notifications.js';
@@ -101,7 +102,7 @@ async function postBooking(request, env, origin, now, send) {
   const created = await createPendingBooking(env.DB, validated.value, quote, now);
   if (!created.ok) return json({ ok: false, error: created.error, message: created.message }, created.status, origin, env);
 
-  const emails = await sendRequestEmails(env, created.booking, send);
+  const emails = await sendRequestEmails(env, created.booking, send, new URL(request.url).origin);
   const emailed = deliveryOk(emails.guest);
   return json({
     ok: true,
@@ -132,6 +133,7 @@ export async function handleRequest(request, env, deps = {}) {
     if (request.method === 'GET' && path === '/api/health') return json({ ok: true }, 200, origin, env);
     if (request.method === 'GET' && path === '/api/availability') return await getAvailability(request, env, origin, now);
     if (request.method === 'POST' && path === '/api/bookings') return await postBooking(request, env, origin, now, send);
+    if (path === '/decide') return await handleDecision(request, env, now, send);
     return json({ ok: false, error: 'not_found', message: 'Not found.' }, 404, origin, env);
   } catch (error) {
     console.log(JSON.stringify({ event: 'request_error', message: String(error && error.message || error) }));

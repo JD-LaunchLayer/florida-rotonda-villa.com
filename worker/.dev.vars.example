@@ -10,3 +10,6 @@ ALLOW_LOCALHOST=true
 # BANK_SORT_CODE=
 # BANK_ACCOUNT_NUMBER=
 # EMAIL_API_URL=https://api.resend.com/emails
+# Approval links need a long random secret. Set it with:
+# npx wrangler secret put APPROVAL_SECRET
+# Do not write the value in this file.
