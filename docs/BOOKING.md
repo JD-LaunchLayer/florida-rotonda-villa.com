@@ -2,19 +2,19 @@
 
 `/booking` is the on-site booking page. The file lives at `booking.html/index.html`, which is how the other exported pages are stored. `booking/index.html` is the same file for local preview. On Netlify, `netlify.toml` rewrites `/booking` and `/booking/` to that file with status 200, and redirects `/booking.html`, `/booking.html/`, and `/booking-demo.html` to `/booking`. Nav and BOOK NOW links use `/booking`.
 
-This version is front-end only. The request form still posts to the existing Web3Forms endpoint. It does not confirm a reservation: the owner confirms, and the dates are held while the request is pending.
-
-TODO: the next change should post the request to our own API instead of Web3Forms. No email is sent by this site itself.
+The request form posts to the villa booking API. See [BACKEND.md](BACKEND.md). It does not confirm a reservation: the owner confirms, and the dates are held for 72 hours while the request is pending. The contact page still posts to Web3Forms.
 
 ## Availability
 
-Booked stays live in [`data/availability.json`](../data/availability.json) as check-in and check-out dates (`YYYY-MM-DD`).
+The calendar reads live ranges from `GET /api/availability`. The API base URL is [`data/booking-api.json`](../data/booking-api.json). If that file has no URL, or the API cannot be reached, the calendar uses [`data/availability.json`](../data/availability.json).
+
+Booked stays are check-in and check-out dates (`YYYY-MM-DD`).
 
 - The check-in date is the first occupied night.
 - The check-out date is the departure morning. That night is not occupied, so another guest can check in the same day.
 - A guest can also check out on a morning that is someone else's check-in. The overlap check looks at nights only.
 
-The only booked range is check-in 1 February 2027, check-out 1 April 2027. Nights of 1 February through 31 March 2027 are booked. 1 April 2027 is a valid check-in. There are no sample ranges.
+The static file's only booked range is check-in 1 February 2027, check-out 1 April 2027. Nights of 1 February through 31 March 2027 are booked. 1 April 2027 is a valid check-in. There are no sample ranges. The live API adds pending and confirmed requests on top of that block.
 
 Any arrival weekday is allowed. The minimum stay is 1 night.
 
@@ -59,5 +59,5 @@ Cot hire and high chair hire are once per stay, from `extras.cot` and `extras.hi
 ## Tests
 
 ```bash
-node --test tests/price-stay.test.js tests/booking-page.test.js
+TZ=UTC node --test tests/price-stay.test.js tests/booking-page.test.js worker/test/backend.test.js
 ```

@@ -1,3 +1,7 @@
 .vs/
 *.sqlite
 .netlify
+node_modules/
+.wrangler/
+.dev.vars
+worker/worker-configuration.d.ts

@@ -87,6 +87,18 @@ test('page script has no dollar signs or hard-coded prices', () => {
   assert.equal(/freetobook/i.test(html), false);
 });
 
+test('booking requests go to the villa API and the contact form stays on Web3Forms', () => {
+  const booking = read('booking.html/index.html');
+  assert.equal(/web3forms/i.test(booking), false);
+  assert.equal(/access_key/i.test(booking), false);
+  assert.match(booking, /\/api\/bookings/);
+  assert.match(booking, /\/api\/availability/);
+  assert.match(booking, /\/data\/availability\.json/);
+  assert.match(booking, /\/data\/booking-api\.json/);
+  const contact = read('contact.html/index.html');
+  assert.match(contact, /https:\/\/api\.web3forms\.com\/submit/);
+});
+
 test('old booking-demo and Free to Book reservation links are gone', () => {
   const htmlFiles = [];
   function walk(dir) {
