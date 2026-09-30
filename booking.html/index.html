@@ -139,8 +139,9 @@
 			padding: 22px;
 		}
 
-		/* The theme lays this section out as a table, which blocks position: sticky. */
-		body.wsite-page-booking #main-wrap > .wsite-section-wrap,
+		/* The theme lays this section out as a table, which blocks position: sticky.
+		   The wrap sits inside #wsite-content, not as a direct child of #main-wrap. */
+		body.wsite-page-booking #main-wrap .wsite-section-wrap,
 		body.wsite-page-booking #main-wrap .wsite-section.wsite-body-section {
 			display: block;
 			width: 100%;
