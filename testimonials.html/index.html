@@ -29,7 +29,11 @@ html.carousel-js .review-slide { flex: 0 0 100%; width: 100%; min-width: 100%; s
 .guest-review { margin: 0; padding: 1.15rem 1.15rem 0.9rem; background: #fffcf7; border: 1px solid #c1a367; box-sizing: border-box; }
 html.carousel-js .review-slide + .review-slide .guest-review { border-top: 1px solid #c1a367; }
 .guest-review .guest-review-credit { margin: 0; color: #5c5144; font-weight: 700; line-height: 1.4; font-family: 'Lato', sans-serif; font-size: 0.95rem; }
-.guest-review blockquote { margin: 0.7rem 0 0.85rem; padding: 0 0 0 0.9rem; border-left: 3px solid #c1a367; }
+.guest-review blockquote { display: block; position: static; margin: 0.35rem 0 0.85rem; padding: 0; border: 0; background: none; color: #2c2416; font-size: 1rem; line-height: 1.45; }
+.guest-review blockquote:before,
+.guest-review blockquote:after { position: static; float: none; left: auto; right: auto; top: auto; bottom: auto; margin: 0; }
+.guest-review blockquote:before { content: "\201C"; display: block; color: #c1a367; font-family: Georgia, 'Times New Roman', serif; font-size: 3rem; line-height: 0.7; margin: 0.1rem 0 0.35rem; }
+.guest-review blockquote:after { content: none; display: none; }
 .guest-review blockquote p { margin: 0; font-family: Georgia, 'Lato', serif; font-size: 1.35rem; line-height: 1.45; color: #2c2416; }
 .guest-review details { margin-top: 0.15rem; }
 .guest-review summary { cursor: pointer; font-weight: 700; color: #2c2416; padding: 0.45rem 0; line-height: 1.4; font-family: 'Lato', sans-serif; }
