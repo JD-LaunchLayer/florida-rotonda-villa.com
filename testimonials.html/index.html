@@ -13,24 +13,60 @@
 
 
 <style>
-.guest-review { max-width: 40rem; margin: 0 auto 0.25rem; color: #2c2416; text-align: left; }
-.guest-review .guest-review-credit { margin: 0; color: #2c2416; font-weight: 700; line-height: 1.4; }
-.guest-review blockquote { margin: 0.45rem 0 0.65rem; padding: 0 0 0 0.9rem; border-left: 3px solid #c1a367; }
-.guest-review blockquote p { margin: 0; font-family: Georgia, 'Lato', serif; font-size: 1.15rem; line-height: 1.45; }
+.reviews-intro, .review-carousel, .review-book { max-width: 40rem; margin-left: auto; margin-right: auto; color: #2c2416; text-align: left; }
+.reviews-intro p { margin: 0 0 0.85rem; line-height: 1.6; font-family: Georgia, 'Lato', serif; font-size: 1.05rem; }
+.reviews-invite { font-style: italic; }
+.area-link { margin: 0.25rem 0 1.25rem; }
+.area-link a { color: #2c2416; }
+.area-link a:focus-visible, .review-book a:focus-visible, .review-nav:focus-visible, .review-dot:focus-visible, .guest-review summary:focus-visible { outline: 2px solid #c1a367; outline-offset: 3px; }
+.review-carousel:focus { outline: none; }
+.review-carousel:focus-visible { outline: 2px solid #c1a367; outline-offset: 4px; }
+.review-track { display: flex; flex-direction: column; gap: 1.5rem; }
+html.carousel-js .review-track { flex-direction: row; gap: 0; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+html.carousel-js .review-track::-webkit-scrollbar { display: none; }
+html.carousel-js .review-slide { flex: 0 0 100%; width: 100%; min-width: 100%; scroll-snap-align: start; scroll-snap-stop: always; box-sizing: border-box; }
+.review-slide { scroll-margin-top: 1rem; }
+.guest-review { margin: 0; padding: 1.15rem 1.15rem 0.9rem; background: #fffcf7; border: 1px solid #c1a367; box-sizing: border-box; }
+html.carousel-js .review-slide + .review-slide .guest-review { border-top: 1px solid #c1a367; }
+.guest-review .guest-review-credit { margin: 0; color: #5c5144; font-weight: 700; line-height: 1.4; font-family: 'Lato', sans-serif; font-size: 0.95rem; }
+.guest-review blockquote { display: block; position: static; margin: 0.35rem 0 0.85rem; padding: 0; border: 0; background: none; color: #2c2416; font-size: 1rem; line-height: 1.45; }
+.guest-review blockquote:before,
+.guest-review blockquote:after { position: static; float: none; left: auto; right: auto; top: auto; bottom: auto; margin: 0; }
+.guest-review blockquote:before { content: "\201C"; display: block; color: #c1a367; font-family: Georgia, 'Times New Roman', serif; font-size: 3rem; line-height: 0.7; margin: 0.1rem 0 0.35rem; }
+.guest-review blockquote:after { content: none; display: none; }
+.guest-review blockquote p { margin: 0; font-family: Georgia, 'Lato', serif; font-size: 1.35rem; line-height: 1.45; color: #2c2416; }
 .guest-review details { margin-top: 0.15rem; }
-.guest-review summary { cursor: pointer; font-weight: 700; color: #2c2416; padding: 0.4rem 0; line-height: 1.4; }
+.guest-review summary { cursor: pointer; font-weight: 700; color: #2c2416; padding: 0.45rem 0; line-height: 1.4; font-family: 'Lato', sans-serif; }
 .guest-review summary:focus { outline: 2px solid #c1a367; outline-offset: 3px; }
 .guest-review summary:focus:not(:focus-visible) { outline: none; }
-.guest-review summary:focus-visible { outline: 2px solid #c1a367; outline-offset: 3px; }
-.guest-review details .paragraph { margin-top: 0.75rem; line-height: 1.65; overflow-wrap: anywhere; }
+.guest-review details .paragraph { margin-top: 0.75rem; line-height: 1.65; overflow-wrap: anywhere; font-family: Georgia, 'Lato', serif; }
 .guest-review details .paragraph p { margin: 0 0 1rem; line-height: 1.65; }
+.review-controls { display: none; align-items: center; justify-content: center; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.9rem; }
+html.carousel-js .review-controls { display: flex; }
+.review-nav { flex: 0 0 auto; min-height: 2.75rem; padding: 0.4rem 0.85rem; background: #fffcf7; color: #2c2416; border: 2px solid #c1a367; font-family: 'Lato', sans-serif; font-weight: 700; cursor: pointer; }
+.review-nav:hover { background: #c1a367; color: #fffcf7; }
+.review-dots { display: flex; flex: 1 1 8rem; flex-wrap: wrap; justify-content: center; gap: 0.4rem; min-width: 0; }
+html:not(.carousel-js) .review-dots { display: flex; flex-wrap: wrap; gap: 0.45rem; margin: 0.5rem 0 0; }
+html:not(.carousel-js) .review-controls { display: block; }
+html:not(.carousel-js) .review-nav { display: none; }
+.review-dot { width: 0.7rem; height: 0.7rem; border-radius: 50%; border: 2px solid #c1a367; background: transparent; display: inline-block; }
+.review-dot[aria-current="true"] { background: #c1a367; }
+.review-status { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.review-book { margin-top: 1.25rem; text-align: center; }
+.review-book a { display: inline-block; min-height: 2.75rem; padding: 0.65rem 1.25rem; background: #c1a367; color: #fffcf7; text-decoration: none; font-family: 'Lato', sans-serif; font-weight: 700; letter-spacing: 0.02em; }
+.review-book a:hover { background: #2c2416; }
 @media (max-width: 640px) {
-  .guest-review { max-width: 100%; }
-  .guest-review blockquote p { font-size: 1.05rem; }
+  .reviews-intro, .review-carousel, .review-book { max-width: 100%; }
+  .guest-review blockquote p { font-size: 1.15rem; }
+  .review-nav { padding: 0.4rem 0.55rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html.carousel-js .review-track { scroll-behavior: auto; }
 }
 </style>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <script>document.documentElement.classList.add("carousel-js");</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 
 		<script type="text/javascript" src="/assets/animate/d62029584.js"></script>
 		<link id="wsite-base-style" rel="stylesheet" type="text/css" href="//cdn2.editmysite.com/css/sites.css?buildTime=1677526202" />
@@ -240,8 +276,15 @@ var STYLE_PREFIX = 'wsite';
 		<div class="wsite-section-content">
 				<div class="container">
 			<div class="wsite-section-elements">
-				<div class="area-link"><a href="https://www.tripadvisor.com/VacationRentalReview-g34595-g34595-d1874508-Executive_Style_Villa_with_Stunning_Views-Rotonda_West_Florida-Executive_Style_Villa_with_Stunning_Views-Rotonda_West_Florida.html" target="_blank" rel="noopener">Learn more about Rotonda West on TripAdvisor</a></div>
+				<div class="reviews-intro">
+<p>Minslake is a family home in Rotonda, South West Florida, near Cape Haze, Boca Grande and Englewood on the Gulf of Mexico. It offers over 2,400 sq. ft of living space, and the pool looks out onto a large picturesque lake. This relaxing area is the perfect spot for a laid-back, quiet vacation.</p>
+<p class="reviews-invite">Come and read some of our guests&rsquo; reviews.</p>
+<p class="area-link"><a href="https://www.tripadvisor.com/VacationRentalReview-g34595-g34595-d1874508-Executive_Style_Villa_with_Stunning_Views-Rotonda_West_Florida-Executive_Style_Villa_with_Stunning_Views-Rotonda_West_Florida.html" target="_blank" rel="noopener">Learn more about Rotonda West on TripAdvisor</a></p>
+</div>
 
+<section class="review-carousel" data-review-carousel aria-roledescription="carousel" aria-label="Guest reviews" tabindex="0">
+<div class="review-track">
+<article class="review-slide" id="review-1" aria-roledescription="slide" aria-label="1 of 16, Steve and Grace Keeling, August 2016">
 <div class="guest-review">
 <p class="guest-review-credit">Steve and Grace Keeling, August 2016</p>
 <blockquote><p>It certainly can’t be bettered for relaxation by the pool over a water view.</p></blockquote>
@@ -257,11 +300,8 @@ var STYLE_PREFIX = 'wsite';
 </div>
 </details>
 </div>
-
-<div><div style="height: 20px; overflow: hidden; width: 100%;"></div>
-<hr class="styled-hr" style="width:100%;"></hr>
-<div style="height: 20px; overflow: hidden; width: 100%;"></div></div>
-
+</article>
+<article class="review-slide" id="review-2" aria-roledescription="slide" aria-label="2 of 16, Martin Wheeler - May 2009">
 <div class="guest-review">
 <p class="guest-review-credit">Martin Wheeler - May 2009</p>
 <blockquote><p>Minslake gave us exactly that.</p></blockquote>
@@ -270,11 +310,8 @@ var STYLE_PREFIX = 'wsite';
 <div class="paragraph">&#8203;"We had a wonderful three weeks staying in Minslake. We have found in the past that photographs and descriptions can be misleading but in your case the pictures and description do not do justice to the true experience of staying in Minslake. A wonderfully comfortable master bed, usually one of my criticisms as I am a very light sleeper, a well equipped kitchen, nothing has been forgotten, and a very comfortable pair of lounge areas. Minslake is so clean and well looked after, you and the management company must be constantly updating it to ensure the comfort of your guests. We were looking for a relaxing holiday, a home from home, and Minslake gave us exactly that. We slept well, there were no disturbances, Rotonda is a wonderfully peaceful area and Minslake has a gorgeous view over the lake from the lanai with no neighbours overlooking the rear of the property. The lake also had regular visits from Moses, the resident alligator. We can honestly say that this has been the best villa that we have stayed in since we first visited Florida in the early 90s, and we have paid a lot more for some of the previous villas. When we next come to the area we will definitely put Minslake as our first choice." <br /><br />&#8203;Martin Wheeler - May 2009</div>
 </details>
 </div>
-
-<div><div style="height: 20px; overflow: hidden; width: 100%;"></div>
-<hr class="styled-hr" style="width:100%;"></hr>
-<div style="height: 20px; overflow: hidden; width: 100%;"></div></div>
-
+</article>
+<article class="review-slide" id="review-3" aria-roledescription="slide" aria-label="3 of 16, Brian & Dot ( Swansea.), December 2008">
 <div class="guest-review">
 <p class="guest-review-credit">Brian &amp; Dot ( Swansea.)</p>
 <p class="guest-review-credit">December 2008</p>
@@ -284,11 +321,8 @@ var STYLE_PREFIX = 'wsite';
 <div class="paragraph">We stayed at Minslake in December 2008.When we pulled into the drive the villa looked nice but just like the others on that street.However, when we entered the lounge and saw the view beyond the swimming pool and over the lake and the standard of the furnishings we knew we had chosen the correct villa.Everything we could wish for was provided.The mountain bikes were particularly welcome to explore the area.There is an abundance of amazing wildlife in the area , some of them frequently visited the lake. As with most places in the states a car is a must ,although I found it very relaxing exploring the area on the mountain bike.There is an abundance of Golf Courses in the area but not being a golfer I can't comment on them. I would have no hesitation in recommending this villa. <br /><br />&#8203;Brian &amp; Dot ( Swansea.)&nbsp;</div>
 </details>
 </div>
-
-<div><div style="height: 20px; overflow: hidden; width: 100%;"></div>
-<hr class="styled-hr" style="width:100%;"></hr>
-<div style="height: 20px; overflow: hidden; width: 100%;"></div></div>
-
+</article>
+<article class="review-slide" id="review-4" aria-roledescription="slide" aria-label="4 of 16, Jackie Easter">
 <div class="guest-review">
 <p class="guest-review-credit">Jackie Easter</p>
 <blockquote><p>we had a wonderful time in your house.</p></blockquote>
@@ -297,11 +331,8 @@ var STYLE_PREFIX = 'wsite';
 <div class="paragraph">Hi Muriel, just to say that we had a wonderful time in your house. It was just as lovely as you promised. The house was really comfortable and we enjoyed the swimming pool and watching the alligators swimming up and down from the safety of the Lanai ! We had a few bike rides on the cycle tracks in the area and saw snakes and tortoises and various other interesting creatures. We nearly ran over a wild boar that came running across the road in Pine Valley Court !<br /><br />&#8203;Jackie Easter<br /></div>
 </details>
 </div>
-
-<div><div style="height: 20px; overflow: hidden; width: 100%;"></div>
-<hr class="styled-hr" style="width:100%;"></hr>
-<div style="height: 20px; overflow: hidden; width: 100%;"></div></div>
-
+</article>
+<article class="review-slide" id="review-5" aria-roledescription="slide" aria-label="5 of 16, Kathryn Saunders, Aug 2007">
 <div class="guest-review">
 <p class="guest-review-credit">Kathryn Saunders, Aug 2007</p>
 <blockquote><p>we found Minslake to be far superior in many respects.</p></blockquote>
@@ -310,11 +341,8 @@ var STYLE_PREFIX = 'wsite';
 <div class="paragraph">Just returned from a fabulous stay in your beautiful home, Minslake. We have visited Florida many times,the last few visits being on the Rotonda. However, we found Minslake to be far superior in many respects. The villa is beautifully appointed and exceptionally well equipped. We found the pc and internet very useful for looking up local information, opening and closing times for shops, restaurants and cinemas, and for looking at local maps and obtaining directions etc. The furnishings and decor are to a very high standard and are exceptionally comfortable. The villa itself is spotlessly clean and very well maintained, as are the beautiful pool and landscaped gardens. The setting must be one of the best plots on the Rotonda as it overlooks a very picturesque lake teaming with wildlife. We loved to sit and watch the lake in the evenings to see if we could identify the wildlife with the help of the numerous books you so thoughtfully provide. An added bonus is the total privacy around the pool area, since the landscaped gardens are large and the adjacent plots in no way overlook the rear of the villa. I must also say thank you to the management team who were very friendly and efficient, and were always at the end of the telephone when we needed any advice. We loved our holiday so much, we have already reserved our next visit 12 months in advance as we couldn't bear the thought of returning to the Rotonda and missing out on staying at Minslake. <br /><br />&#8203;Kathryn Saunders, Aug 2007</div>
 </details>
 </div>
-
-<div><div style="height: 20px; overflow: hidden; width: 100%;"></div>
-<hr class="styled-hr" style="width:100%;"></hr>
-<div style="height: 20px; overflow: hidden; width: 100%;"></div></div>
-
+</article>
+<article class="review-slide" id="review-6" aria-roledescription="slide" aria-label="6 of 16, Arthur Boylan, 25 June 2005">
 <div class="guest-review">
 <p class="guest-review-credit">Arthur Boylan</p>
 <p class="guest-review-credit">25 June 2005</p>
@@ -324,11 +352,8 @@ var STYLE_PREFIX = 'wsite';
 <div class="paragraph">We loved our stay at Minslake; you have such a lovely villa in a nice quiet area but the view over the lake and its regular 'visitors' make it really special. I don't know about you, but we suffer badly from post-Florida depression - the weather and way of life over there are so much better than the UK; if only it were a easier to retire there! I'm sure last month's visit won't be our last and we might well be in touch with you again. Best wishes Arthur and Elizabeth 25 June 2005<br /><br />&#8203;Arthur Boylan<br /></div>
 </details>
 </div>
-
-<div><div style="height: 20px; overflow: hidden; width: 100%;"></div>
-<hr class="styled-hr" style="width:100%;"></hr>
-<div style="height: 20px; overflow: hidden; width: 100%;"></div></div>
-
+</article>
+<article class="review-slide" id="review-7" aria-roledescription="slide" aria-label="7 of 16, Mary and David Donovan">
 <div class="guest-review">
 <p class="guest-review-credit">Mary and David Donovan</p>
 <blockquote><p>we were not disappointed.</p></blockquote>
@@ -337,11 +362,8 @@ var STYLE_PREFIX = 'wsite';
 <div class="paragraph">Hi Michael and Muriel We wanted to let you know what a great time we had while staying in your beautiful villa this September. It was our first visit to Florida and we looked at many different properties on-line before deciding to book Minslake. Having looked at your website we expected something special and we were not disappointed. We first spent a few hectic days in Orlando, visiting theme parks with our daughter and her partner. To arrive at the villa, in such a scenic and peaceful location was a welcome contrast.<br /><br />&#8203;Mary and David Donovan</div>
 </details>
 </div>
-
-<div><div style="height: 20px; overflow: hidden; width: 100%;"></div>
-<hr class="styled-hr" style="width:100%;"></hr>
-<div style="height: 20px; overflow: hidden; width: 100%;"></div></div>
-
+</article>
+<article class="review-slide" id="review-8" aria-roledescription="slide" aria-label="8 of 16, Mary and David Donovan">
 <div class="guest-review">
 <p class="guest-review-credit">Mary and David Donovan</p>
 <blockquote><p>the spotlessly clean accommodation and facilities were exceptional.</p></blockquote>
@@ -350,11 +372,8 @@ var STYLE_PREFIX = 'wsite';
 <div class="paragraph">The villa gave us the freedom to do what we wanted, and the spotlessly clean accommodation and facilities were exceptional. Throughout our stay the temperature was a constant 30&deg;C; the air conditioning was most welcome. We all made good use of the pool and in fact spent almost all our time at the villa sitting outside in the lanai, catching the sun and watching the wildlife. We were fortunate to see the alligator and also armadillos, raccoons, ospreys, water snakes and lots of frogs and lizards. Our daughter and her partner used the bikes every day. We found the nearby shops stocked everything we needed.<br /><br />Mary and David Donovan<br /></div>
 </details>
 </div>
-
-<div><div style="height: 20px; overflow: hidden; width: 100%;"></div>
-<hr class="styled-hr" style="width:100%;"></hr>
-<div style="height: 20px; overflow: hidden; width: 100%;"></div></div>
-
+</article>
+<article class="review-slide" id="review-9" aria-roledescription="slide" aria-label="9 of 16, Jean Mathieson - March 2006">
 <div class="guest-review">
 <p class="guest-review-credit">Jean Mathieson - March 2006</p>
 <blockquote><p>certainly the best one we have stayed in.</p></blockquote>
@@ -363,11 +382,8 @@ var STYLE_PREFIX = 'wsite';
 <div class="paragraph">Thanks so much for the e-mail - unfortunately we were already in Florida by the time it arrived, as we had one night in Miami, and then two weeks in Fort Myers before heading North to your lovely villa. Wow, what a fabulous villa - we have rented a few in the Rotonda area, and yours is really outstanding. I don't think your web site did it justice, it is so equisitely presented and tastefully furnished - just lovely, and certainly the best one we have stayed in. <br /><br />&#8203;Jean Mathieson - March 2006</div>
 </details>
 </div>
-
-<div><div style="height: 20px; overflow: hidden; width: 100%;"></div>
-<hr class="styled-hr" style="width:100%;"></hr>
-<div style="height: 20px; overflow: hidden; width: 100%;"></div></div>
-
+</article>
+<article class="review-slide" id="review-10" aria-roledescription="slide" aria-label="10 of 16, C & D Lockwood, Date of Stay: April 2010">
 <div class="guest-review">
 <p class="guest-review-credit">C &amp; D Lockwood</p>
 <p class="guest-review-credit">Date of Stay: April 2010</p>
@@ -377,11 +393,8 @@ var STYLE_PREFIX = 'wsite';
 <div class="paragraph">Lockies Essex Date of Stay: April 2010 Our stay at Minslake was everything we could have dreamed of and more. The fantastic views over the lake and watching the wildlife will stick with us for ever. The villa is in a very peaceful location yet near to many restuarants shops and attractions. It is our second visit to this area and if you are looking for a peaceful holiday but with plenty to do this is an ideal area. Our stay here was extended by a week due to the volcanic ash problems - Muriel and the management company went out of their way to make the problems as stress free as possible. We were able to stay an extra week at this wonderful villa and having access to the internet made making arrangements for our extra week so much easier. I cannot fault this villa and can honestly say our family had one of the best holidays we have ever had here - we have been to Florida many times and stayed in many lovely villas but this place has something a little bit special. Thank you so much Muriel for allowing us to stay in your villa and all your help with arranging the extra week. Recommended for: Age 55+, Sightseeing, Families with Teenagers, Families with Young Children, Romantic Getaway&nbsp;<br /><br />&#8203;C &amp; D Lockwood<br /></div>
 </details>
 </div>
-
-<div><div style="height: 20px; overflow: hidden; width: 100%;"></div>
-<hr class="styled-hr" style="width:100%;"></hr>
-<div style="height: 20px; overflow: hidden; width: 100%;"></div></div>
-
+</article>
+<article class="review-slide" id="review-11" aria-roledescription="slide" aria-label="11 of 16, Bantam Nottinghamshire, Date of Stay: May 2009">
 <div class="guest-review">
 <p class="guest-review-credit">Bantam Nottinghamshire</p>
 <p class="guest-review-credit">Date of Stay: May 2009</p>
@@ -391,11 +404,8 @@ var STYLE_PREFIX = 'wsite';
 <div class="paragraph">&#8203;Great Villa..Great Holiday Bantam Nottinghamshire Date of Stay: May 2009 "We had a wonderful three weeks staying in Minslake. We have found in the past that photographs and descriptions can be misleading but in your case the pictures and description do not do justice to the true experience of staying in Minslake. A wonderfully comfortable master bed, usually one of my criticisms as I am a very light sleeper, a well equipped kitchen, nothing has been forgotten, and a very comfortable pair of lounge areas. Minslake is so clean and well looked after, you and the management company must be constantly updating it to ensure the comfort of your guests. We were looking for a relaxing holiday, a home from home, and Minslake gave us exactly that. We slept well, there were no disturbances, Rotonda is a wonderfully peaceful area and Minslake has a gorgeous view over the lake from the lanai with no neighbours overlooking the rear of the property. The lake also had regular visits from Moses, the resident alligator. We can honestly say that this has been the best villa that we have stayed in since we first visited Florida in the early 90s, and we have paid a lot more for some of the previous villas. When we next come to the area we will definitely put Minslake as our first choice."&nbsp;</div>
 </details>
 </div>
-
-<div><div style="height: 20px; overflow: hidden; width: 100%;"></div>
-<hr class="styled-hr" style="width:100%;"></hr>
-<div style="height: 20px; overflow: hidden; width: 100%;"></div></div>
-
+</article>
+<article class="review-slide" id="review-12" aria-roledescription="slide" aria-label="12 of 16, Lynda Smith - USA, Date of Stay: November 2008">
 <div class="guest-review">
 <p class="guest-review-credit">Lynda Smith - USA</p>
 <p class="guest-review-credit">Date of Stay: November 2008</p>
@@ -405,11 +415,8 @@ var STYLE_PREFIX = 'wsite';
 <div class="paragraph">Date of Stay: November 2008 This home is one of the most gorgeous and comfortable homes we have stayed in. The view is absolutely incredible. This home has everything you will need for a fabulous vacation. We are so greatful that the owners share this wonderful paradise with all. I really miss the warm relaxing pool and view. We are planning to book this home again in the very near future. If you are lucky enough to come across this home......book it!!!! You will not be sorry!!!!!!!&nbsp;<br /><br />Lynda Smith - USA<br /></div>
 </details>
 </div>
-
-<div><div style="height: 20px; overflow: hidden; width: 100%;"></div>
-<hr class="styled-hr" style="width:100%;"></hr>
-<div style="height: 20px; overflow: hidden; width: 100%;"></div></div>
-
+</article>
+<article class="review-slide" id="review-13" aria-roledescription="slide" aria-label="13 of 16, The Easter Family from West Yorkshire, Reviewed on: 01/23/2013 for their stay in 08/2012">
 <div class="guest-review">
 <p class="guest-review-credit">The Easter Family from West Yorkshire</p>
 <p class="guest-review-credit">Reviewed on: 01/23/2013 for their stay in 08/2012</p>
@@ -419,11 +426,8 @@ var STYLE_PREFIX = 'wsite';
 <div class="paragraph">&#8203;Reviewed by: The Easter Family from West Yorkshire Reviewed on: 01/23/2013 for their stay in 08/2012 232598 - Executive Style Villa with Stunning Views Minslake is quite simply a home away from home. Furnished to a very high standard with everything you could wish for a relaxing break. The villa is beautifully kept among manicured grounds in a quiet location away from it all. The pool overlooks the lake and is very private, hours are passed relaxing while watching the wildlife. The computer/Printer is an added bonus and ideal for finding places to visit, cinema times, opening times, restaurants, events and for online check in at the airport etc. There are plenty of books, games and magazines. Beach equipment is provided with a coolbox for picnics. A couple of bikes are provided which are great, although at some of the parks you can rent them too. The villa is close to shops restaurants and supermarkets. Port Charlotte is only 20 minutes away with a Mall, Cinema and lots of restaurants. The beautiful beaches are close too. The Villa was a wonderful base to explore the Gulf Coast and beyond, we travelled to Orlando, Miami, The keys and Everglades from here easily. Tampa airport is a straight 90 minutes away. Outlet Malls are an hours ride away too for those bargain shopping trips and a little quieter and more relaxed than Orlando. We love this Villa so much we won't stay anywhere else! The management team are fantastic and on hand should you have any problems (although you probably won't need them!) The inside is kept immaculate and never fails to impress us when we arrive, its a much welcomed site after a long journey. If we have to pick one fault it would be no BBQ, although there are so many restaurants to try and you may not have the time to use it!</div>
 </details>
 </div>
-
-<div><div style="height: 20px; overflow: hidden; width: 100%;"></div>
-<hr class="styled-hr" style="width:100%;"></hr>
-<div style="height: 20px; overflow: hidden; width: 100%;"></div></div>
-
+</article>
+<article class="review-slide" id="review-14" aria-roledescription="slide" aria-label="14 of 16, Left on 01/22/2013 for a stay in December 2012">
 <div class="guest-review">
 <p class="guest-review-credit">Left on 01/22/2013 for a stay in December 2012</p>
 <blockquote><p>Minslake filled the bill 100%</p></blockquote>
@@ -432,11 +436,8 @@ var STYLE_PREFIX = 'wsite';
 <div class="paragraph">Left on 01/22/2013 for a stay in December 2012 My Wife and myself were looking for a villa over Christmas.Somewhere with a water view,without being too busy. Minslake filled the bill 100% It was clean,bright,Expensively furnished, easy to get around in.All your home comforts were available, including free internet access if you needed to message friends,We only used the one bed, it was a very comfortable one,something that you hope for if you stay at any home /Hotel but don't always get.There was a Good sized TV In the lounge, and plenty of Dvds for a quiet evening at home.We never needed anything that was not to hand. Even the clock in the day room is a pleasant experience. .The pool was superb,very clean and easy to get in and out, young or old alike.Ideal for all kinds of swimming, games for kids etc. no fussy plants waterfalls,or other items to bump into, just a quality pool, that even in the winter was 80 degrees.Even the garage was immaculate with pool toys, beach chairs, etc.Another good thing about this home we noticed was the lack of noise from the air-con.It just ran in the background and did its job.No waking up in the night when it came on or off.Altogether a very pleasant experience.We have been to many homes in this part of Florida and this is one we can without doubt recommend.We will certainly go there again. I'm sure I could write forever about the qualities of this home,don't just take our word for it,try it for yourselves.I guarantee you will not be disappointed.The owner too is very approachable,If she can help at all she will.If you are at all in any doubt as to if this review is not 100% genuine, you are most welcome to ask for our Email /Phone number.&nbsp;</div>
 </details>
 </div>
-
-<div><div style="height: 20px; overflow: hidden; width: 100%;"></div>
-<hr class="styled-hr" style="width:100%;"></hr>
-<div style="height: 20px; overflow: hidden; width: 100%;"></div></div>
-
+</article>
+<article class="review-slide" id="review-15" aria-roledescription="slide" aria-label="15 of 16, Westwell Family - August 2013">
 <div class="guest-review">
 <p class="guest-review-credit">Westwell Family - August 2013</p>
 <blockquote><p>Your villa is amazing!</p></blockquote>
@@ -445,11 +446,8 @@ var STYLE_PREFIX = 'wsite';
 <div class="paragraph">Dear Muriel, We have just returned from our fantastic holiday in Florida. After spending 2 weeks at a large 5 bedroomed villa in Davenport we really didn't think it could get any better, until we arrived at Minslake. Your villa is amazing! and really finished off our holiday with a 'bang!' It is kept to the highest of standards and is in a fantastic location. We felt so privileged to be able to stay there and also experience the vast array of wildlife(although we didn't manage to catch a glimpse of Moses) We had 2 very quiet and sad children when we left yesterday(Sunday)morning and they are already asking when we can return. If it is ok with you we will keep hold of your information and hopefully we will be able to return in the next couple of years. Thank you once again Tracey, Simon, Rachael and Nathan Westwell<br /><br />&#8203;Westwell Family - August 2013</div>
 </details>
 </div>
-
-<div><div style="height: 20px; overflow: hidden; width: 100%;"></div>
-<hr class="styled-hr" style="width:100%;"></hr>
-<div style="height: 20px; overflow: hidden; width: 100%;"></div></div>
-
+</article>
+<article class="review-slide" id="review-16" aria-roledescription="slide" aria-label="16 of 16, Mr & Mrs Keeling - August 2013">
 <div class="guest-review">
 <p class="guest-review-credit">Mr &amp; Mrs Keeling - August 2013</p>
 <blockquote><p>If you go to the Rotonda you won't go wrong staying in Minslake.</p></blockquote>
@@ -458,10 +456,34 @@ var STYLE_PREFIX = 'wsite';
 <div class="paragraph">This was our first return to the Rotonda since 2004 after escaping Hurricane Charlie by just 24 hours. This time we were blown away by the villa location and its quality interior. We'd searched for a lake view. We had that view in spades and it was all to ourselves. The neighbouring villa was set back and not visible from the pool area and the double lot meant nothing but trees to the right. It was an idyllic private setting to laze an afternoon away in the sun. The interior was as good. It was well maintained, light, airy, designed to maximise the lake view and had comfortable beds and furnishings. We knew the Rotonda well, and this was up there with best villa we'd stayed in, and way above the average ones. It stood out by being someone's home and not just a rental income. Extras provided were great. The bikes were good for sightseeing the Rotonda ... but only early morning !!! Too hot later. Detailed directions made TV and DVD use idiot proof, or at least we could switch between them without asking our son and technical advisor back in the UK. A 30 minute trip, driveway to beach, returned us to our favourite beach on Gasparilla Island and just under 20 minutes took us to the closest beach at Engelwood. North from Engelwood up Manasota Key took us to a couple of good beaches with facilities, both well worth a visit, but we kept returning to Gasparilla Island. The parasols, beach chairs and cooler provided made those trips easy and comfortable. To celebrate our last day we ended up being one of the first cars over the new Gasparilla Bridge and were snapped on the contractor's camera. If you go that way get your camera ready for the Ospreys fishing from the telephone poles alongside the road. If you go to the Rotonda you won't go wrong staying in Minslake.<br /><br />&#8203;Mr &amp; Mrs Keeling - August 2013<br /></div>
 </details>
 </div>
+</article>
+</div>
+<div class="review-controls">
+<button type="button" class="review-nav" data-carousel-prev aria-label="Previous review">Previous</button>
+<div class="review-dots" role="group" aria-label="Choose a review">
+<a class="review-dot" href="#review-1" data-carousel-dot aria-current="true" aria-label="Steve and Grace Keeling, August 2016"></a>
+<a class="review-dot" href="#review-2" data-carousel-dot aria-label="Martin Wheeler - May 2009"></a>
+<a class="review-dot" href="#review-3" data-carousel-dot aria-label="Brian &amp; Dot ( Swansea.)"></a>
+<a class="review-dot" href="#review-4" data-carousel-dot aria-label="Jackie Easter"></a>
+<a class="review-dot" href="#review-5" data-carousel-dot aria-label="Kathryn Saunders, Aug 2007"></a>
+<a class="review-dot" href="#review-6" data-carousel-dot aria-label="Arthur Boylan"></a>
+<a class="review-dot" href="#review-7" data-carousel-dot aria-label="Mary and David Donovan"></a>
+<a class="review-dot" href="#review-8" data-carousel-dot aria-label="Mary and David Donovan"></a>
+<a class="review-dot" href="#review-9" data-carousel-dot aria-label="Jean Mathieson - March 2006"></a>
+<a class="review-dot" href="#review-10" data-carousel-dot aria-label="C &amp; D Lockwood"></a>
+<a class="review-dot" href="#review-11" data-carousel-dot aria-label="Bantam Nottinghamshire"></a>
+<a class="review-dot" href="#review-12" data-carousel-dot aria-label="Lynda Smith - USA"></a>
+<a class="review-dot" href="#review-13" data-carousel-dot aria-label="The Easter Family from West Yorkshire"></a>
+<a class="review-dot" href="#review-14" data-carousel-dot aria-label="Left on 01/22/2013 for a stay in December 2012"></a>
+<a class="review-dot" href="#review-15" data-carousel-dot aria-label="Westwell Family - August 2013"></a>
+<a class="review-dot" href="#review-16" data-carousel-dot aria-label="Mr &amp; Mrs Keeling - August 2013"></a>
+</div>
+<button type="button" class="review-nav" data-carousel-next aria-label="Next review">Next</button>
+</div>
+<p class="review-status" data-carousel-status aria-live="polite">Review 1 of 16</p>
+</section>
+<p class="review-book"><a href="/booking">Book your stay</a></p>
 
-<div><div style="height: 20px; overflow: hidden; width: 100%;"></div>
-<hr class="styled-hr" style="width:100%;"></hr>
-<div style="height: 20px; overflow: hidden; width: 100%;"></div></div>
 			</div>
 		</div>
 			</div>
@@ -571,5 +593,70 @@ var STYLE_PREFIX = 'wsite';
 
 
 
-	<style>#__framer-badge-container,#__framer-badge,[data-framer-badge],a[href*="framer.com/?utm_source=framer-banner-"]{display:none!important;visibility:hidden!important;height:0!important;width:0!important;overflow:hidden!important;pointer-events:none!important}</style><script>(function(){var SEL='#__framer-badge-container,#__framer-badge,a[href*="framer.com/?utm_source=framer-banner-"]';function k(n){if(!n||!n.matches)return;if(n.id==="__framer-badge-container"||n.id==="__framer-badge"||n.matches('a[href*="framer.com/?utm_source=framer-banner-"]')){n.remove()}}new MutationObserver(function(m){m.forEach(function(r){r.addedNodes.forEach(function(n){k(n);if(n.querySelectorAll){n.querySelectorAll(SEL).forEach(function(e){e.remove()})}})})}).observe(document.documentElement,{childList:true,subtree:true});function sweep(){document.querySelectorAll(SEL).forEach(function(e){e.remove()})}if(document.readyState==='complete'){setTimeout(sweep,0)}else{window.addEventListener('load',function(){setTimeout(sweep,0)},{once:true})}})()</script></body>
+	<style>#__framer-badge-container,#__framer-badge,[data-framer-badge],a[href*="framer.com/?utm_source=framer-banner-"]{display:none!important;visibility:hidden!important;height:0!important;width:0!important;overflow:hidden!important;pointer-events:none!important}</style><script>(function(){var SEL='#__framer-badge-container,#__framer-badge,a[href*="framer.com/?utm_source=framer-banner-"]';function k(n){if(!n||!n.matches)return;if(n.id==="__framer-badge-container"||n.id==="__framer-badge"||n.matches('a[href*="framer.com/?utm_source=framer-banner-"]')){n.remove()}}new MutationObserver(function(m){m.forEach(function(r){r.addedNodes.forEach(function(n){k(n);if(n.querySelectorAll){n.querySelectorAll(SEL).forEach(function(e){e.remove()})}})})}).observe(document.documentElement,{childList:true,subtree:true});function sweep(){document.querySelectorAll(SEL).forEach(function(e){e.remove()})}if(document.readyState==='complete'){setTimeout(sweep,0)}else{window.addEventListener('load',function(){setTimeout(sweep,0)},{once:true})}})()</script><script>
+(function () {
+  var root = document.querySelector('[data-review-carousel]');
+  if (!root || !window.matchMedia) return;
+  document.documentElement.classList.add('carousel-js');
+  var track = root.querySelector('.review-track');
+  var slides = Array.prototype.slice.call(root.querySelectorAll('.review-slide'));
+  var dots = Array.prototype.slice.call(root.querySelectorAll('[data-carousel-dot]'));
+  var status = root.querySelector('[data-carousel-status]');
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var index = 0;
+  var programmatic = false;
+
+  function setCurrent(next) {
+    index = (next + slides.length) % slides.length;
+    slides.forEach(function (slide, n) {
+      var on = n === index;
+      slide.setAttribute('aria-hidden', on ? 'false' : 'true');
+      if (on) slide.removeAttribute('inert');
+      else slide.setAttribute('inert', '');
+    });
+    dots.forEach(function (dot, n) {
+      if (n === index) dot.setAttribute('aria-current', 'true');
+      else dot.removeAttribute('aria-current');
+    });
+    if (status) status.textContent = 'Review ' + (index + 1) + ' of ' + slides.length;
+  }
+
+  function go(next) {
+    setCurrent(next);
+    var slide = slides[index];
+    var left = slide.getBoundingClientRect().left - track.getBoundingClientRect().left + track.scrollLeft;
+    programmatic = true;
+    track.scrollTo({ left: left, behavior: reduce ? 'auto' : 'smooth' });
+    window.setTimeout(function () { programmatic = false; }, reduce ? 0 : 450);
+  }
+
+  root.querySelector('[data-carousel-prev]').addEventListener('click', function () { go(index - 1); });
+  root.querySelector('[data-carousel-next]').addEventListener('click', function () { go(index + 1); });
+  dots.forEach(function (dot, n) {
+    dot.addEventListener('click', function (event) {
+      event.preventDefault();
+      go(n);
+    });
+  });
+
+  function onKey(event) {
+    var target = event.target;
+    if (target && target.closest && target.closest('.paragraph')) return;
+    if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+    event.preventDefault();
+    go(event.key === 'ArrowRight' ? index + 1 : index - 1);
+  }
+  root.addEventListener('keydown', onKey);
+  setCurrent(0);
+
+  track.addEventListener('scroll', function () {
+    if (programmatic) return;
+    var width = track.clientWidth || 1;
+    var next = Math.round(track.scrollLeft / width);
+    if (next !== index && next >= 0 && next < slides.length) setCurrent(next);
+  });
+  track.addEventListener('scrollend', function () { programmatic = false; });
+})();
+</script>
+</body>
 </html>
